@@ -1,5 +1,6 @@
 {
   "projects": {
-    "skahl-stats": "spof-io"
+    "skahl-stats": "spof-io",
+    "default": "spof-io"
   }
 }
