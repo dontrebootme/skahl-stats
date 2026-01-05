@@ -22,5 +22,5 @@ jobs:
 
       - name: Run Ingest
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
         run: bun run src/ingest.ts
