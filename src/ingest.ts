@@ -106,6 +106,7 @@ async function main() {
         } else {
             console.error("❌ Error:", error);
         }
+        process.exit(1); // Ensure CI fails
     }
 
     console.log("Ingestion complete.");
