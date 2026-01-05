@@ -1,0 +1,19 @@
+{
+    "name": "skahl-stats",
+    "version": "1.0.0",
+    "description": "SportNinja data scraper for Sno King AHL",
+    "main": "src/ingest.ts",
+    "type": "module",
+    "scripts": {
+        "start": "bun run src/ingest.ts",
+        "test": "bun test"
+    },
+    "dependencies": {
+        "firebase-admin": "^13.0.0",
+        "puppeteer": "^23.0.0",
+        "axios": "^1.7.0"
+    },
+    "devDependencies": {
+        "@types/bun": "latest"
+    }
+}
