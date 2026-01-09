@@ -56,10 +56,20 @@ async function main() {
         // --- STEP 2: Fetch Active Schedule ---
         console.log("Fetching Org Schedules...");
         const schedulesRes = await axios.get(`${API_BASE}/organizations/${ORG_ID}/schedules`, { headers });
-        // Filter for active season or just grab the first one
-        const activeSchedule = schedulesRes.data.data?.[0];
+        const schedules = schedulesRes.data.data || [];
 
-        if (!activeSchedule) throw new Error("No active schedule found.");
+        // Find schedule where today is within starts_at and ends_at
+        const now = new Date();
+        const activeSchedule = schedules.find((s: any) => {
+            const start = new Date(s.starts_at);
+            const end = new Date(s.ends_at);
+            return now >= start && now <= end;
+        });
+
+        if (!activeSchedule) {
+            console.log("⚠️ No active schedule found locally. Defaulting to first item or error.");
+            throw new Error("No currently running schedule found.");
+        }
         console.log(`Targeting Schedule: ${activeSchedule.name} (${activeSchedule.id})`);
 
         // --- STEP 3: Fetch Games ---
@@ -71,20 +81,19 @@ async function main() {
         // --- STEP 4: Submit Games & Extract Teams ---
         const teamsMap = new Map<string, any>(); // Extract team metadata from game objects
 
+        // Fill teamsMap regardless of DB
+        for (const game of games) {
+            if (game.homeTeam?.id) teamsMap.set(game.homeTeam.id, game.homeTeam);
+            if (game.visitingTeam?.id) teamsMap.set(game.visitingTeam.id, game.visitingTeam);
+        }
+
         if (db) {
             const batch = db.batch();
             let count = 0;
             for (const game of games) {
                 if (!game.id) continue;
-
-                // Save Game
                 const docRef = db.collection('games').doc(game.id);
                 batch.set(docRef, { ...game, lastUpdated: new Date() }, { merge: true });
-
-                // Extract Unique Teams
-                if (game.homeTeam?.id) teamsMap.set(game.homeTeam.id, game.homeTeam);
-                if (game.visitingTeam?.id) teamsMap.set(game.visitingTeam.id, game.visitingTeam);
-
                 count++;
                 if (count >= 400) { await batch.commit(); count = 0; }
             }
