@@ -47,66 +47,104 @@ async function main() {
         await browser.close();
     }
 
-    // --- STEP 2: Fetch Schedules (Seasons) ---
-    console.log("Fetching Org Schedules...");
     const headers = {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json'
     };
 
     try {
-        // Note: The API wraps the array in a "data" property
+        // --- STEP 2: Fetch Active Schedule ---
+        console.log("Fetching Org Schedules...");
         const schedulesRes = await axios.get(`${API_BASE}/organizations/${ORG_ID}/schedules`, { headers });
-        const schedules = schedulesRes.data.data; // <--- Critical fix
+        // Filter for active season or just grab the first one
+        const activeSchedule = schedulesRes.data.data?.[0];
 
-        if (!Array.isArray(schedules) || schedules.length === 0) {
-            throw new Error("No schedules found for organization.");
-        }
-
-        console.log(`✅ Found ${schedules.length} schedules.`);
-
-        // Pick the most relevant schedule (e.g., active or first one)
-        // You might want to filter by date or "is_active" flag if available
-        const activeSchedule = schedules[0];
+        if (!activeSchedule) throw new Error("No active schedule found.");
         console.log(`Targeting Schedule: ${activeSchedule.name} (${activeSchedule.id})`);
 
-        // --- STEP 3: Fetch Games for Schedule ---
+        // --- STEP 3: Fetch Games ---
         const gamesUrl = `${API_BASE}/schedules/${activeSchedule.id}/games`;
         const gamesRes = await axios.get(gamesUrl, { headers });
+        const games = Array.isArray(gamesRes.data) ? gamesRes.data : gamesRes.data.data || [];
+        console.log(`✅ Fetched ${games.length} games.`);
 
-        // Check if games are wrapped in 'data' too (SportNinja pattern seems to be consistently 'data')
-        const games = Array.isArray(gamesRes.data) ? gamesRes.data : gamesRes.data.data;
-        console.log(`✅ Fetched ${games?.length || 0} games for schedule.`);
+        // --- STEP 4: Submit Games & Extract Teams ---
+        const teamsMap = new Map<string, any>(); // Extract team metadata from game objects
 
-        // --- STEP 4: Write to Firestore ---
-        if (db && Array.isArray(games)) {
+        if (db) {
             const batch = db.batch();
             let count = 0;
-
             for (const game of games) {
                 if (!game.id) continue;
+
+                // Save Game
                 const docRef = db.collection('games').doc(game.id);
                 batch.set(docRef, { ...game, lastUpdated: new Date() }, { merge: true });
+
+                // Extract Unique Teams
+                if (game.homeTeam?.id) teamsMap.set(game.homeTeam.id, game.homeTeam);
+                if (game.visitingTeam?.id) teamsMap.set(game.visitingTeam.id, game.visitingTeam);
+
                 count++;
                 if (count >= 400) { await batch.commit(); count = 0; }
             }
-            if (count > 0) { await batch.commit(); }
+            if (count > 0) await batch.commit();
             console.log(`Saved ${games.length} games to Firestore.`);
-        } else {
-            console.log("Skipping DB write.");
-            if (games && games.length > 0) {
-                console.log("Sample Game:", JSON.stringify(games[0], null, 2));
+        }
+
+        // --- STEP 5: Fetch & Save Teams + Rosters ---
+        console.log(`Found ${teamsMap.size} unique teams. Fetching Rosters...`);
+
+        // Process teams in chunks to avoid rate limits
+        const teams = Array.from(teamsMap.values());
+        for (const team of teams) {
+            console.log(`Processing Team: ${team.name} (${team.id})...`);
+
+            // 5a. Save Team Metadata
+            if (db) {
+                await db.collection('teams').doc(team.id).set({ ...team, lastUpdated: new Date() }, { merge: true });
+            }
+
+            // 5b. Find Roster ID for this Season
+            // We look for a roster whose 'schedule_id' matches our activeSchedule.id
+            try {
+                const rosterMetaRes = await axios.get(`${API_BASE}/teams/${team.id}/rosters`, { headers });
+                const rosterMetas = rosterMetaRes.data.data || [];
+
+                // Find the roster generated for the current active schedule/season
+                const targetRoster = rosterMetas.find((r: any) => r.schedule_id === activeSchedule.id);
+
+                if (targetRoster) {
+                    // 5c. Fetch Players
+                    const playersRes = await axios.get(`${API_BASE}/teams/${team.id}/rosters/${targetRoster.id}/players`, { headers });
+                    const players = playersRes.data.data || [];
+                    console.log(`   -> Found ${players.length} players (Roster ID: ${targetRoster.id})`);
+
+                    // 5d. Save Roster
+                    if (db && players.length > 0) {
+                        const rosterBatch = db.batch();
+                        for (const player of players) {
+                            const pRef = db.collection('teams').doc(team.id).collection('roster').doc(player.id);
+                            rosterBatch.set(pRef, { ...player, rosterId: targetRoster.id, lastUpdated: new Date() }, { merge: true });
+                        }
+                        await rosterBatch.commit();
+                    }
+                } else {
+                    console.log(`   -> No matching roster found for season ${activeSchedule.name}`);
+                }
+
+            } catch (e) {
+                console.error(`   -> Failed to fetch roster for team ${team.id}:`, axios.isAxiosError(e) ? e.message : e);
             }
         }
 
     } catch (error) {
         if (axios.isAxiosError(error)) {
             console.error("❌ API Error:", error.response?.status, error.response?.statusText);
-            console.error("Response data:", JSON.stringify(error.response?.data).slice(0, 200));
         } else {
             console.error("❌ Error:", error);
         }
-        process.exit(1); // Ensure CI fails
+        process.exit(1);
     }
 
     console.log("Ingestion complete.");
