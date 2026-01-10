@@ -1,6 +1,6 @@
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import puppeteer from "puppeteer";
+import puppeteer, { Browser, Page } from "puppeteer";
 import axios from "axios";
 
 // 1. Initialize Firebase
@@ -12,14 +12,19 @@ const db = serviceAccountEnv
 if (!db) console.log("⚠️ No FIREBASE_SERVICE_ACCOUNT found. Firestore writes will be skipped.");
 
 const SNOKING_URL = "https://snokingahl.com";
+const SNOKING_TEAM_BASE = "https://snokingahl.com/schedule-stats/#/team";
 const ORG_ID = "77NV8cZJ8xzsgvjL";
 const API_BASE = "https://metal-api.sportninja.net/v1";
+
+// Helper: (Removed)
+
+
 
 async function main() {
     console.log(`[${new Date().toISOString()}] Starting Ingestion...`);
 
     // --- STEP 1: Get Token ---
-    console.log("Launching headless browser to extract token...");
+    console.log("Launching headless browser...");
     const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -43,13 +48,14 @@ async function main() {
         console.error("❌ Failed to get token:", error);
         await browser.close();
         process.exit(1);
-    } finally {
-        await browser.close();
     }
+    // KEEP BROWSER OPEN
 
     const headers = {
         'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Origin': 'https://snokingahl.com',
+        'Referer': 'https://snokingahl.com/'
     };
 
     try {
@@ -60,17 +66,25 @@ async function main() {
 
         // Find schedule where today is within starts_at and ends_at
         const now = new Date();
-        const activeSchedule = schedules.find((s: any) => {
+        const matchingSchedules = schedules.filter((s: any) => {
             const start = new Date(s.starts_at);
             const end = new Date(s.ends_at);
             return now >= start && now <= end;
         });
 
-        if (!activeSchedule) {
-            console.log("⚠️ No active schedule found locally. Defaulting to first item or error.");
+        if (matchingSchedules.length === 0) {
+            console.error("❌ No active schedule found for current date:", now.toISOString());
             throw new Error("No currently running schedule found.");
         }
-        console.log(`Targeting Schedule: ${activeSchedule.name} (${activeSchedule.id})`);
+
+        // Use the first matching schedule, but warn if there are multiple (e.g. overlap with playoffs)
+        const activeSchedule = matchingSchedules[0];
+        if (matchingSchedules.length > 1) {
+            console.warn(`⚠️ Multiple schedules match today's date: ${matchingSchedules.map((s: any) => s.name).join(", ")}`);
+            console.warn(`➡️ Defaulting to: ${activeSchedule.name} (${activeSchedule.id})`);
+        } else {
+            console.log(`✅ Targeting Schedule: ${activeSchedule.name} (${activeSchedule.id})`);
+        }
 
         // --- STEP 3: Fetch Games ---
         const gamesUrl = `${API_BASE}/schedules/${activeSchedule.id}/games`;
@@ -104,7 +118,7 @@ async function main() {
         // --- STEP 5: Fetch & Save Teams + Rosters ---
         console.log(`Found ${teamsMap.size} unique teams. Fetching Rosters...`);
 
-        // Process teams in chunks to avoid rate limits
+        // Process teams
         const teams = Array.from(teamsMap.values());
         for (const team of teams) {
             console.log(`Processing Team: ${team.name} (${team.id})...`);
@@ -114,36 +128,56 @@ async function main() {
                 await db.collection('teams').doc(team.id).set({ ...team, lastUpdated: new Date() }, { merge: true });
             }
 
-            // 5b. Find Roster ID for this Season
-            // We look for a roster whose 'schedule_id' matches our activeSchedule.id
+            // 5b. Find Roster ID
+            // Try Standard API First
+            let rosterId: string | null = null;
             try {
+                // Now works with proper headers!
                 const rosterMetaRes = await axios.get(`${API_BASE}/teams/${team.id}/rosters`, { headers });
-                const rosterMetas = rosterMetaRes.data.data || [];
+                const rosterMetas = Array.isArray(rosterMetaRes.data) ? rosterMetaRes.data : (rosterMetaRes.data.data || []);
 
-                // Find the roster generated for the current active schedule/season
-                const targetRoster = rosterMetas.find((r: any) => r.schedule_id === activeSchedule.id);
-
+                // Note: The object has "schedule_uid" matching our "activeSchedule.id"
+                const targetRoster = rosterMetas.find((r: any) => r.schedule_uid === activeSchedule.id || r.schedule_id === activeSchedule.id);
                 if (targetRoster) {
-                    // 5c. Fetch Players
-                    const playersRes = await axios.get(`${API_BASE}/teams/${team.id}/rosters/${targetRoster.id}/players`, { headers });
-                    const players = playersRes.data.data || [];
-                    console.log(`   -> Found ${players.length} players (Roster ID: ${targetRoster.id})`);
-
-                    // 5d. Save Roster
-                    if (db && players.length > 0) {
-                        const rosterBatch = db.batch();
-                        for (const player of players) {
-                            const pRef = db.collection('teams').doc(team.id).collection('roster').doc(player.id);
-                            rosterBatch.set(pRef, { ...player, rosterId: targetRoster.id, lastUpdated: new Date() }, { merge: true });
-                        }
-                        await rosterBatch.commit();
-                    }
-                } else {
-                    console.log(`   -> No matching roster found for season ${activeSchedule.name}`);
+                    rosterId = targetRoster.id || targetRoster.uid;
+                    console.log(`   -> Found Roster ID via API: ${rosterId}`);
                 }
+            } catch (e) { console.error(`   -> API Error finding roster: ${e}`); }
 
-            } catch (e) {
-                console.error(`   -> Failed to fetch roster for team ${team.id}:`, axios.isAxiosError(e) ? e.message : e);
+            // 5c. Fetch & Save Players
+            if (rosterId) {
+                try {
+                    const playersRes = await axios.get(`${API_BASE}/teams/${team.id}/rosters/${rosterId}/players`, { headers });
+
+                    // Unpack response: It is consistently { data: [ ... ] }
+                    const responseBody = playersRes.data;
+
+                    // Flexible unpacking
+                    let players: any[] = [];
+                    if (Array.isArray(responseBody)) players = responseBody;
+                    else if (Array.isArray(responseBody.data)) players = responseBody.data;
+                    else if (responseBody.data && Array.isArray(responseBody.data.players)) players = responseBody.data.players;
+                    else if (responseBody.data && Array.isArray(responseBody.data.data)) players = responseBody.data.data;
+
+                    if (players.length > 0) {
+                        console.log(`   -> Found ${players.length} players.`);
+
+                        if (db && players.length > 0) {
+                            const rosterBatch = db.batch();
+                            for (const player of players) {
+                                const pRef = db.collection('teams').doc(team.id).collection('roster').doc(player.id);
+                                rosterBatch.set(pRef, { ...player, rosterId: rosterId, lastUpdated: new Date() }, { merge: true });
+                            }
+                            await rosterBatch.commit();
+                        }
+                    } else {
+                        console.warn(`   -> ⚠️ Could not find player array in response.`);
+                    }
+                } catch (e: any) {
+                    console.error(`   -> Failed to fetch players for ${rosterId}: ${e.message}`);
+                }
+            } else {
+                console.warn(`   -> ⚠️ Could not find Roster ID for team ${team.name}. Skipping players.`);
             }
         }
 
@@ -153,7 +187,10 @@ async function main() {
         } else {
             console.error("❌ Error:", error);
         }
+        await browser.close();
         process.exit(1);
+    } finally {
+        await browser.close();
     }
 
     console.log("Ingestion complete.");
