@@ -1,44 +1,79 @@
 # Skahl Stats
 
-Automated stats scraper and API wrapper for the Sno King Adult Hockey League (SKAHL).
+Automated stats scraper, API wrapper, and Coach Dashboard for the Sno King Adult Hockey League (SKAHL).
 
 ## Overview
-This project bypasses the need for manual login by using a headless browser to retrieve the ephemeral authentication token used by the Sno King stats plugin. It then uses this token to fetch organization schedules and game statistics directly from the SportNinja API, syncing them to a Firebase Firestore database.
+This project performs two main functions:
+1.  **Ingestion**: Bypasses the need for manual login by using a headless browser to retrieve ephemeral tokens, fetches data from the SportNinja API, and syncs it to Google Firestore.
+2.  **Coach Dashboard**: A React-based web application (hosted on Firebase) that provides a fast, flat-design interface for coaches to view team rosters, schedules, and stats.
 
 ## Architecture
-*   **Runtime**: Bun + TypeScript
-*   **Auth**: Puppeteer (Headless Chrome)
+*   **Ingestion (Backend)**:
+    *   **Runtime**: Bun + TypeScript
+    *   **Auth**: Puppeteer (Headless Chrome)
+    *   **Automation**: GitHub Actions (Scheduled CRON)
+*   **Dashboard (Frontend)**:
+    *   **Framework**: React + Vite + TypeScript
+    *   **Styling**: Tailwind CSS (Flat Design System)
+    *   **Hosting**: Firebase Hosting
 *   **Database**: Firebase Firestore
-*   **Automation**: GitHub Actions (Scheduled CRON)
 
-## Prerequistes
+## Prerequisites
 *   [Bun](https://bun.sh)
 *   Firebase CLI
 
 ## Local Development
 
-1.  **Install Dependencies**
+### Backend (Ingestion)
+1.  **Install Dependencies**:
     ```bash
     bun install
     ```
-
-2.  **Run Ingestion (Dry Run)**
-    This will fetch the data but skip writing to Firestore if no credentials are provided.
+2.  **Run Ingestion (Dry Run)**:
     ```bash
     bun run src/ingest.ts
     ```
 
-## Deployment
-This project uses GitHub Actions for scheduled ingestion.
-
-1.  **Firebase Setup**
-    Initialize hosting to configure the GitHub Action secrets.
+### Frontend (Web UI)
+1.  **Navigate to Web Dir**:
     ```bash
-    firebase init hosting:github
+    cd web
+    ```
+2.  **Configuration**:
+    Copy `.env.example` to `.env` and fill in your Firebase Client keys.
+    ```bash
+    cp .env.example .env
+    ```
+3.  **Run Dev Server**:
+    ```bash
+    npm install
+    npm run dev
     ```
 
-2.  **Secrets**
-    Ensure `FIREBASE_SERVICE_ACCOUNT` is set in your GitHub Repository Secrets (handled by the command above).
+## Deployment
+
+This project uses **GitHub Actions** for both data ingestion and web deployment.
+
+### 1. Firebase Setup
+*   Initialize Firebase Hosting in your project.
+*   Create a hosting site: `firebase hosting:sites:create skahl-stats`.
+*   Verify `.firebaserc` maps the `skahl-ui` target to your site.
+
+### 2. Secrets Configuration
+Add the following secrets to your GitHub Repository:
+*   `FIREBASE_SERVICE_ACCOUNT_SPOF_IO`: For deploying to Hosting and writing to Firestore (Backend).
+*   **Public Client Keys** (For Web Build):
+    *   `VITE_FIREBASE_API_KEY`
+    *   `VITE_FIREBASE_AUTH_DOMAIN`
+    *   `VITE_FIREBASE_PROJECT_ID`
+    *   `VITE_FIREBASE_STORAGE_BUCKET`
+    *   `VITE_FIREBASE_MESSAGING_SENDER_ID`
+    *   `VITE_FIREBASE_APP_ID`
+
+### 3. DNS (Cloudflare)
+To serve the site at `skahl.spof.io` (or your chosen domain):
+1.  Add the custom domain in Firebase Console -> Hosting.
+2.  Add a `CNAME` record in Cloudflare: `skahl` -> `skahl-stats.web.app`.
 
 ## Docs
 *   [System Design](docs/system_design.md)

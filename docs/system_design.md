@@ -58,6 +58,8 @@ Document ID: `gameId`
 
 ### 3. Presentation Layer
 *   **Frontend**: React app hosted on **Firebase Hosting** (Free).
+    *   **Direct Access**: The browser app reads data directly from Firestore (`teams` and `games` collections) using the Firebase Client SDK.
+    *   **Security**: `firestore.rules` are configured to allow public READ access to these collections but block WRITE access (reserved for ingestion backend).
 *   **Discord Bot**: Can arguably run inside the GitHub Action *if* it's just posting updates (webhooks). For a conversational bot, you'd need a separate free host (like Fly.io or a Raspberry Pi), but that's out of scope for the core data pipeline.
 
 ## Implementation Roadmap

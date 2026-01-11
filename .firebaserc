@@ -2,5 +2,14 @@
   "projects": {
     "skahl-stats": "spof-io",
     "default": "spof-io"
+  },
+  "targets": {
+    "spof-io": {
+      "hosting": {
+        "skahl-ui": [
+          "skahl-stats"
+        ]
+      }
+    }
   }
 }
