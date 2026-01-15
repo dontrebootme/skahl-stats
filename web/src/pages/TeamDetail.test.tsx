@@ -35,8 +35,8 @@ describe('TeamDetail Page', () => {
         };
 
         const mockRoster = [
-            { id: 'p1', data: () => ({ firstName: 'John', lastName: 'Doe', jerseyNumber: '99', position: 'Forward' }) },
-            { id: 'p2', data: () => ({ firstName: 'Jane', lastName: 'Smith', jerseyNumber: '1', position: 'Goalie' }) },
+            { id: 'p1', data: () => ({ name_first: 'John', name_last: 'Doe', player_number: '99', position: 'Forward' }) },
+            { id: 'p2', data: () => ({ name_first: 'Jane', name_last: 'Smith', player_number: '1', position: 'Goalie' }) },
         ];
 
         (firestore.getDoc as any).mockResolvedValue(mockTeam);
@@ -68,8 +68,8 @@ describe('TeamDetail Page', () => {
         };
 
         const mockRoster = [
-            { id: 'p1', data: () => ({ firstName: 'Player', lastName: 'Two', jerseyNumber: '20' }) },
-            { id: 'p2', data: () => ({ firstName: 'Player', lastName: 'One', jerseyNumber: '10' }) },
+            { id: 'p1', data: () => ({ name_first: 'Player', name_last: 'Two', player_number: '20' }) },
+            { id: 'p2', data: () => ({ name_first: 'Player', name_last: 'One', player_number: '10' }) },
         ];
 
         (firestore.getDoc as any).mockResolvedValue(mockTeam);
