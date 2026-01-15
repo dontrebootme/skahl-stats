@@ -5,11 +5,22 @@ import axios from "axios";
 
 // 1. Initialize Firebase
 const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-const db = serviceAccountEnv
-    ? (initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) }), getFirestore())
-    : null;
+const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
 
-if (!db) console.log("⚠️ No FIREBASE_SERVICE_ACCOUNT found. Firestore writes will be skipped.");
+let db;
+
+if (emulatorHost) {
+    console.log(`⚠️ FIRESTORE_EMULATOR_HOST detected (${emulatorHost}). Connecting to Emulator...`);
+    initializeApp({ projectId: "skahl-stats" });
+    db = getFirestore();
+} else if (serviceAccountEnv) {
+    initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
+    db = getFirestore();
+} else {
+    db = null;
+}
+
+if (!db) console.log("⚠️ No FIREBASE_SERVICE_ACCOUNT or FIRESTORE_EMULATOR_HOST found. Firestore writes will be skipped.");
 
 const SNOKING_URL = "https://snokingahl.com";
 const SNOKING_TEAM_BASE = "https://snokingahl.com/schedule-stats/#/team";
