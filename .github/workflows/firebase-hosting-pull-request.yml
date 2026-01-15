@@ -13,6 +13,10 @@ jobs:
       
       - name: Install Dependencies
         run: cd web && npm install
+
+      - name: Run Unit Tests
+        run: cd web && npm run test
+
         
       - name: Build Web App
         run: cd web && npm run build

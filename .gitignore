@@ -4,3 +4,4 @@ node_modules/
 dist/
 firebase-debug.log
 .puppeteer/
+firestore-debug.log

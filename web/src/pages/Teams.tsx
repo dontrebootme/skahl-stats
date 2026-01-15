@@ -10,6 +10,11 @@ interface Team {
     id: string;
     name: string;
     season_id?: string;
+    league?: string;
+    division?: string;
+    image?: {
+        full_path: string;
+    };
 }
 
 export default function Teams() {
@@ -56,17 +61,32 @@ export default function Teams() {
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {teams.map((team) => (
                         <Link key={team.id} to={`/teams/${team.id}`}>
-                            <Card className="h-full bg-white hover:bg-muted/50 transition-colors border-l-4 border-l-primary/0 hover:border-l-primary">
+                            <Card className="h-full bg-white hover:bg-muted/50 transition-colors hover:shadow-md cursor-pointer overflow-hidden border-0 shadow-sm ring-1 ring-inset ring-gray-200">
                                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
-                                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mr-4">
-                                        <Users className="h-6 w-6 text-primary" />
+                                    <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mr-4 overflow-hidden border border-gray-100 shrink-0">
+                                        {team.image?.full_path ? (
+                                            <img
+                                                src={team.image.full_path}
+                                                alt={team.name}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <Users className="h-8 w-8 text-primary/40" />
+                                        )}
                                     </div>
-                                    <div className="flex-1">
-                                        <CardTitle className="text-xl">{team.name}</CardTitle>
+                                    <div className="flex-1 min-w-0">
+                                        <CardTitle className="text-lg truncate">{team.name}</CardTitle>
+                                        {team.league && (
+                                            <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mt-1">
+                                                {team.league} {team.division ? `- ${team.division}` : ''}
+                                            </span>
+                                        )}
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-sm text-muted-foreground">ID: {team.id}</p>
+                                    <div className="text-xs text-muted-foreground flex justify-between items-center mt-2">
+                                        <span>View Roster &rarr;</span>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </Link>

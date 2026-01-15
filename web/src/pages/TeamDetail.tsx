@@ -36,14 +36,24 @@ export default function TeamDetail() {
                     setTeam({ id: teamDoc.id, ...teamDoc.data() } as Team);
                 }
 
+                // FETCH ROSTER FROM SUBCOLLECTION
+                // The ingestion script stores players at /teams/{teamId}/roster/{playerId}
                 const rosterSnap = await getDocs(collection(db, 'teams', teamId, 'roster'));
-                const rosterData = rosterSnap.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                })) as Player[];
+
+                const rosterData = rosterSnap.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        firstName: data.name_first || '',
+                        lastName: data.name_last || '',
+                        jerseyNumber: data.jersey_number || data.player_number || '',
+                        position: data.player_type?.name_full || data.position || 'Player'
+                    };
+                }) as Player[];
 
                 // Sort by jersey number
                 rosterData.sort((a, b) => {
+                    // Handle non-numeric jerseys gracefully
                     const numA = parseInt(a.jerseyNumber) || 999;
                     const numB = parseInt(b.jerseyNumber) || 999;
                     return numA - numB;
