@@ -42,7 +42,11 @@ export default function Games() {
                 })) as Game[];
 
                 // Sort client side for reliability in this specific task context
-                gamesData.sort((a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime());
+                gamesData.sort((a, b) => {
+                    const dateA = new Date((a as any).starts_at || (a as any).started_at || 0).getTime();
+                    const dateB = new Date((b as any).starts_at || (b as any).started_at || 0).getTime();
+                    return dateB - dateA;
+                });
 
                 setGames(gamesData);
             } catch (error) {
@@ -75,7 +79,11 @@ export default function Games() {
 
                 <div className="space-y-4">
                     {games.map((game) => {
-                        const date = new Date(game.starts_at);
+                        // Support both scheduled (starts_at) and actual (started_at)
+                        // Cast to any because TS interface update is separate, but runtime data has both
+                        const g = game as any;
+                        const dateStr = g.starts_at || g.started_at;
+                        const date = dateStr ? new Date(dateStr) : new Date();
                         return (
                             <Card key={game.id} className="bg-white hover:bg-muted/30 transition-colors">
                                 <CardContent className="p-6">

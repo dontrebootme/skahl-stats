@@ -60,7 +60,7 @@ export default function Dashboard() {
                         const doc = nextGameSnap.docs[0].data();
 
                         // Safety check for date
-                        const dateStr = doc.starts_at;
+                        const dateStr = doc.starts_at || doc.started_at;
                         let validDate = new Date();
                         if (dateStr) {
                             const parsed = new Date(dateStr);

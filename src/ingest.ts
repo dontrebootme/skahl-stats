@@ -97,11 +97,33 @@ async function main() {
             console.log(`✅ Targeting Schedule: ${activeSchedule.name} (${activeSchedule.id})`);
         }
 
-        // --- STEP 3: Fetch Games ---
+        // --- STEP 3: Fetch Games (With Pagination) ---
         const gamesUrl = `${API_BASE}/schedules/${activeSchedule.id}/games`;
-        const gamesRes = await axios.get(gamesUrl, { headers });
-        const games = Array.isArray(gamesRes.data) ? gamesRes.data : gamesRes.data.data || [];
-        console.log(`✅ Fetched ${games.length} games.`);
+        let allGames: any[] = [];
+        let currentPage = 1;
+        let totalPages = 1;
+
+        console.log(`Fetching games from: ${gamesUrl}`);
+
+        do {
+            process.stdout.write(`   Fetching page ${currentPage}... `);
+            const gamesRes = await axios.get(`${gamesUrl}?page=${currentPage}`, { headers });
+
+            // Handle data structure
+            const pageGames = Array.isArray(gamesRes.data) ? gamesRes.data : (gamesRes.data.data || []);
+            allGames = allGames.concat(pageGames);
+
+            console.log(`Found ${pageGames.length} games.`);
+
+            if (gamesRes.data.meta?.pagination) {
+                totalPages = gamesRes.data.meta.pagination.total_pages;
+            }
+
+            currentPage++;
+        } while (currentPage <= totalPages);
+
+        console.log(`✅ Fetched total of ${allGames.length} games.`);
+        const games = allGames;
 
         // --- STEP 4: Submit Games & Extract Teams ---
         const teamsMap = new Map<string, any>(); // Extract team metadata from game objects
@@ -113,14 +135,19 @@ async function main() {
         }
 
         if (db) {
-            const batch = db.batch();
+            let batch = db.batch();
             let count = 0;
             for (const game of games) {
                 if (!game.id) continue;
                 const docRef = db.collection('games').doc(game.id);
+                // Save raw game object (contains started_at AND starts_at usually)
                 batch.set(docRef, { ...game, lastUpdated: new Date() }, { merge: true });
                 count++;
-                if (count >= 400) { await batch.commit(); count = 0; }
+                if (count >= 400) {
+                    await batch.commit();
+                    batch = db.batch(); // Re-init batch
+                    count = 0;
+                }
             }
             if (count > 0) await batch.commit();
             console.log(`Saved ${games.length} games to Firestore.`);
