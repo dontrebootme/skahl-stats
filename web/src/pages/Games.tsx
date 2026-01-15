@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Container } from '../components/ui/container';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Card, CardContent } from '../components/ui/Card';
 import { db } from '../lib/firebase';
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
 interface Game {
