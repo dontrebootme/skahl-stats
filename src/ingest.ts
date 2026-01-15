@@ -16,6 +16,7 @@ if (emulatorHost) {
 } else if (serviceAccountEnv) {
     initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
     db = getFirestore();
+    console.log(`✅ Connected to Production Firestore via Service Account.`);
 } else {
     db = null;
 }
