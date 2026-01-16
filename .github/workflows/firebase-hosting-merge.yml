@@ -36,15 +36,7 @@ jobs:
           npx firebase-tools deploy --only firestore:rules --project spof-io --json
           rm service-account.json
 
-      - name: Deploy Firestore Rules
-        env:
-          # Use the same service account as hosting
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/service-account.json
-          npx firebase-tools deploy --only firestore:rules --project spof-io --json
-          rm service-account.json
+
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
