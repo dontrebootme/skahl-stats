@@ -11,13 +11,20 @@ let db;
 
 if (emulatorHost) {
     console.log(`⚠️ FIRESTORE_EMULATOR_HOST detected (${emulatorHost}). Connecting to Emulator...`);
-    initializeApp({ projectId: "spof-io" });
+    initializeApp({ projectId: "skahl-stats" });
     db = getFirestore();
 } else if (serviceAccountEnv) {
     initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
     db = getFirestore();
 } else {
-    db = null;
+    // ADC Fallback for local development
+    try {
+        console.log("ℹ️ No env vars found. Attempting ADC connection...");
+        initializeApp({ projectId: "spof-io" });
+        db = getFirestore();
+    } catch (e) {
+        db = null;
+    }
 }
 
 if (!db) console.log("⚠️ No FIREBASE_SERVICE_ACCOUNT or FIRESTORE_EMULATOR_HOST found. Firestore writes will be skipped.");
@@ -140,8 +147,22 @@ async function main() {
             for (const game of games) {
                 if (!game.id) continue;
                 const docRef = db.collection('games').doc(game.id);
-                // Save raw game object (contains started_at AND starts_at usually)
-                batch.set(docRef, { ...game, lastUpdated: new Date() }, { merge: true });
+
+                // Save game object with injected Schedule/Season Metadata
+                const gameData = {
+                    ...game,
+                    scheduleId: activeSchedule.id,
+                    scheduleName: activeSchedule.name,
+                    seasonId: activeSchedule.season_id || null, // Handle undefined
+                    lastUpdated: new Date()
+                };
+
+                // Fallback for missing dates if possible (not much we can do if API is empty, but we verify)
+                if (!gameData.starts_at && !gameData.started_at) {
+                    // console.warn(`   -> Game ${game.id} has no start date.`);
+                }
+
+                batch.set(docRef, gameData, { merge: true });
                 count++;
                 if (count >= 400) {
                     await batch.commit();

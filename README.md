@@ -1,11 +1,11 @@
 # Skahl Stats
 
-Automated stats scraper, API wrapper, and Coach Dashboard for the Sno King Adult Hockey League (SKAHL).
+Automated stats scraper, API wrapper, and Reporting system for the Sno King Adult Hockey League (SKAHL).
 
 ## Overview
 This project performs two main functions:
 1.  **Ingestion**: Bypasses the need for manual login by using a headless browser to retrieve ephemeral tokens, fetches data from the SportNinja API, and syncs it to Google Firestore.
-2.  **Coach Dashboard**: A React-based web application (hosted on Firebase) that provides a fast, flat-design interface for coaches to view team rosters, schedules, and stats.
+2.  **Stats UI**: A React-based web application (hosted on Firebase) that provides a fast, flat-design interface for players to view team rosters, schedules, and stats.
 
 ## Architecture
 *   **Ingestion (Backend)**:
@@ -58,6 +58,7 @@ This project uses **GitHub Actions** for both data ingestion and web deployment.
 *   Initialize Firebase Hosting in your project.
 *   Create a hosting site: `firebase hosting:sites:create skahl-stats`.
 *   Verify `.firebaserc` maps the `skahl-ui` target to your site.
+*   **Live Site**: [skahl.spof.io](https://skahl.spof.io)
 
 ### 2. Secrets Configuration
 Add the following secrets to your GitHub Repository:
@@ -73,7 +74,8 @@ Add the following secrets to your GitHub Repository:
 ### 3. DNS (Cloudflare)
 To serve the site at `skahl.spof.io` (or your chosen domain):
 1.  Add the custom domain in Firebase Console -> Hosting.
-2.  Add a `CNAME` record in Cloudflare: `skahl` -> `skahl-stats.web.app`.
+2.  Add a `CNAME` record in Cloudflare: `skahl` -> `skahl-stats.web.app` (or your firebase app domain).
+    *   Result: `skahl.spof.io`
 
 ## Docs
 *   [System Design](docs/system_design.md)
