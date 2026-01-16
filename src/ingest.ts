@@ -11,7 +11,7 @@ let db;
 
 if (emulatorHost) {
     console.log(`⚠️ FIRESTORE_EMULATOR_HOST detected (${emulatorHost}). Connecting to Emulator...`);
-    initializeApp({ projectId: "skahl-stats" });
+    initializeApp({ projectId: "spof-io" });
     db = getFirestore();
 } else if (serviceAccountEnv) {
     initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
