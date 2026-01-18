@@ -2,6 +2,7 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import puppeteer, { Browser, Page } from "puppeteer";
 import axios from "axios";
+import { GoogleAuth } from "google-auth-library";
 
 // 1. Initialize Firebase
 const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -19,10 +20,15 @@ if (emulatorHost) {
 } else {
     // ADC Fallback for local development
     try {
-        console.log("ℹ️ No env vars found. Attempting ADC connection...");
+        console.log("ℹ️ No env vars found. Checking for ADC credentials...");
+        const auth = new GoogleAuth({ scopes: ['https://www.googleapis.com/auth/cloud-platform'] });
+        await auth.getApplicationDefault();
+
+        console.log("✅ ADC credentials found. Initializing Firestore...");
         initializeApp({ projectId: "spof-io" });
         db = getFirestore();
     } catch (e) {
+        console.warn("⚠️ No ADC credentials found. Proceeding in DRY RUN mode (no DB writes).");
         db = null;
     }
 }
