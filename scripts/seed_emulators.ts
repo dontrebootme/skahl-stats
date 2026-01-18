@@ -32,16 +32,16 @@ async function seed() {
     const rosterRef = teamRef.collection('roster');
 
     await rosterRef.add({
-        firstName: "John",
-        lastName: "Doe",
-        jerseyNumber: "99",
+        name_first: "John",
+        name_last: "Doe",
+        jersey_number: "99",
         position: "Forward"
     });
 
     await rosterRef.add({
-        firstName: "Jane",
-        lastName: "Smith",
-        jerseyNumber: "30",
+        name_first: "Jane",
+        name_last: "Smith",
+        jersey_number: "30",
         position: "Goalie"
     });
     console.log('✅ Created Players: John Doe, Jane Smith');

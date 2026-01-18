@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Container } from './ui/container';
 import { cn } from '../lib/utils';
 import { Menu, X } from 'lucide-react';
+import { SearchBar } from './SearchBar';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [isOpen, setIsOpen] = React.useState(false);
@@ -42,6 +43,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                             ))}
                         </div>
 
+                        <div className="hidden md:block">
+                            <SearchBar />
+                        </div>
+
                         <button
                             className="md:hidden"
                             onClick={() => setIsOpen(!isOpen)}
@@ -56,6 +61,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 {isOpen && (
                     <div className="md:hidden border-b border-border bg-background">
                         <Container className="py-4 flex flex-col space-y-4">
+                            <div className="mb-2">
+                                <SearchBar />
+                            </div>
                             {navItems.map((item) => (
                                 <Link
                                     key={item.path}

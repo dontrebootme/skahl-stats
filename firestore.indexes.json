@@ -1,4 +1,15 @@
 {
-    "indexes": [],
+    "indexes": [
+        {
+            "collectionGroup": "roster",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                {
+                    "fieldPath": "name_last",
+                    "order": "ASCENDING"
+                }
+            ]
+        }
+    ],
     "fieldOverrides": []
 }
