@@ -6,6 +6,7 @@ import { ArrowRight, Trophy, Users, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { COLLECTIONS } from '../lib/collections';
 
 
 export default function Dashboard() {
@@ -19,8 +20,8 @@ export default function Dashboard() {
         const fetchStats = async () => {
             try {
                 // Parallel fetch for counts
-                const teamsColl = collection(db, 'teams');
-                const gamesColl = collection(db, 'games');
+                const teamsColl = collection(db, COLLECTIONS.TEAMS);
+                const gamesColl = collection(db, COLLECTIONS.GAMES);
 
                 // 1. Team Count
                 const teamsSnapshot = await getDocs(teamsColl);
