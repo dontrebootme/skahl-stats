@@ -7,7 +7,6 @@ import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '../lib/collections';
 import { ChevronLeft, User, Info, Activity } from 'lucide-react';
-// import { cn } from '../lib/utils';
 
 interface PlayerDetailData {
     id: string;
@@ -28,12 +27,11 @@ export default function PlayerDetail() {
     const [player, setPlayer] = useState<PlayerDetailData | null>(null);
     const [loading, setLoading] = useState(true);
 
-
     useEffect(() => {
         const fetchPlayer = async () => {
             if (!teamId || !playerId) return;
             try {
-                // Add artificial delay for smooth transition (optional, remove for prod speed)
+                // Add artificial delay for smooth transition
                 // await new Promise(r => setTimeout(r, 300)); 
 
                 const playerDocRef = doc(db, COLLECTIONS.TEAMS, teamId, 'roster', playerId);
