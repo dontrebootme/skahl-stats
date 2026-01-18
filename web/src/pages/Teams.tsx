@@ -3,6 +3,7 @@ import { Container } from '../components/ui/container';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { COLLECTIONS } from '../lib/collections';
 import { Link } from 'react-router-dom';
 import { Users } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export default function Teams() {
     useEffect(() => {
         const fetchTeams = async () => {
             try {
-                const querySnapshot = await getDocs(collection(db, 'teams'));
+                const querySnapshot = await getDocs(collection(db, COLLECTIONS.TEAMS));
                 const teamsData = querySnapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()

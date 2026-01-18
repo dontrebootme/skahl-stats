@@ -2,6 +2,7 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import puppeteer, { Browser, Page } from "puppeteer";
 import axios from "axios";
+import { COLLECTIONS } from "./collections";
 
 // 1. Initialize Firebase
 const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
@@ -34,10 +35,6 @@ const SNOKING_TEAM_BASE = "https://snokingahl.com/schedule-stats/#/team";
 const ORG_ID = "77NV8cZJ8xzsgvjL";
 const API_BASE = "https://metal-api.sportninja.net/v1";
 
-// Helper: (Removed)
-
-
-
 async function main() {
     console.log(`[${new Date().toISOString()}] Starting Ingestion...`);
 
@@ -67,7 +64,6 @@ async function main() {
         await browser.close();
         process.exit(1);
     }
-    // KEEP BROWSER OPEN
 
     const headers = {
         'Authorization': `Bearer ${token}`,
@@ -146,7 +142,7 @@ async function main() {
             let count = 0;
             for (const game of games) {
                 if (!game.id) continue;
-                const docRef = db.collection('games').doc(game.id);
+                const docRef = db.collection(COLLECTIONS.GAMES).doc(game.id);
 
                 // Save game object with injected Schedule/Season Metadata
                 const gameData = {
@@ -184,7 +180,7 @@ async function main() {
 
             // 5a. Save Team Metadata
             if (db) {
-                await db.collection('teams').doc(team.id).set({ ...team, lastUpdated: new Date() }, { merge: true });
+                await db.collection(COLLECTIONS.TEAMS).doc(team.id).set({ ...team, lastUpdated: new Date() }, { merge: true });
             }
 
             // 5b. Find Roster ID
@@ -224,7 +220,7 @@ async function main() {
                         if (db && players.length > 0) {
                             const rosterBatch = db.batch();
                             for (const player of players) {
-                                const pRef = db.collection('teams').doc(team.id).collection('roster').doc(player.id);
+                                const pRef = db.collection(COLLECTIONS.TEAMS).doc(team.id).collection('roster').doc(player.id);
                                 rosterBatch.set(pRef, { ...player, rosterId: rosterId, lastUpdated: new Date() }, { merge: true });
                             }
                             await rosterBatch.commit();

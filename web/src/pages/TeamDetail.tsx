@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Button } from '../components/ui/Button';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { COLLECTIONS } from '../lib/collections';
 import { ChevronLeft, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -32,14 +33,15 @@ export default function TeamDetail() {
         const fetchData = async () => {
             if (!teamId) return;
             try {
-                const teamDoc = await getDoc(doc(db, 'teams', teamId));
+                const teamDoc = await getDoc(doc(db, COLLECTIONS.TEAMS, teamId));
                 if (teamDoc.exists()) {
                     setTeam({ id: teamDoc.id, ...teamDoc.data() } as Team);
                 }
 
                 // FETCH ROSTER FROM SUBCOLLECTION
                 // The ingestion script stores players at /teams/{teamId}/roster/{playerId}
-                const rosterSnap = await getDocs(collection(db, 'teams', teamId, 'roster'));
+                // We use COLLECTIONS.TEAMS which maps to "skahl_teams" (or prefix)
+                const rosterSnap = await getDocs(collection(db, COLLECTIONS.TEAMS, teamId, 'roster'));
 
                 const rosterData = rosterSnap.docs.map(doc => {
                     const data = doc.data();
