@@ -7,7 +7,8 @@ import { Calendar, Clock, MapPin } from 'lucide-react';
 
 interface Game {
     id: string;
-    starts_at: string;
+    starts_at?: string;
+    started_at?: string;
     location?: string;
     homeTeam?: {
         name: string;
@@ -43,8 +44,8 @@ export default function Games() {
 
                 // Sort client side for reliability in this specific task context
                 gamesData.sort((a, b) => {
-                    const dateA = new Date((a as any).starts_at || (a as any).started_at || 0).getTime();
-                    const dateB = new Date((b as any).starts_at || (b as any).started_at || 0).getTime();
+                    const dateA = new Date(a.starts_at || a.started_at || 0).getTime();
+                    const dateB = new Date(b.starts_at || b.started_at || 0).getTime();
                     return dateB - dateA;
                 });
 
@@ -80,9 +81,7 @@ export default function Games() {
                 <div className="space-y-4">
                     {games.map((game) => {
                         // Support both scheduled (starts_at) and actual (started_at)
-                        // Cast to any because TS interface update is separate, but runtime data has both
-                        const g = game as any;
-                        const dateStr = g.starts_at || g.started_at;
+                        const dateStr = game.starts_at || game.started_at;
                         const date = dateStr ? new Date(dateStr) : new Date();
                         return (
                             <Card key={game.id} className="bg-white hover:bg-muted/30 transition-colors">

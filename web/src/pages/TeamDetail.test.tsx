@@ -1,5 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import TeamDetail from './TeamDetail';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import * as firestore from 'firebase/firestore';
@@ -39,8 +39,8 @@ describe('TeamDetail Page', () => {
             { id: 'p2', data: () => ({ name_first: 'Jane', name_last: 'Smith', player_number: '1', position: 'Goalie' }) },
         ];
 
-        (firestore.getDoc as any).mockResolvedValue(mockTeam);
-        (firestore.getDocs as any).mockResolvedValue({ docs: mockRoster });
+        (firestore.getDoc as Mock).mockResolvedValue(mockTeam);
+        (firestore.getDocs as Mock).mockResolvedValue({ docs: mockRoster });
 
         render(
             <MemoryRouter initialEntries={['/teams/team1']}>
@@ -72,8 +72,8 @@ describe('TeamDetail Page', () => {
             { id: 'p2', data: () => ({ name_first: 'Player', name_last: 'One', player_number: '10' }) },
         ];
 
-        (firestore.getDoc as any).mockResolvedValue(mockTeam);
-        (firestore.getDocs as any).mockResolvedValue({ docs: mockRoster });
+        (firestore.getDoc as Mock).mockResolvedValue(mockTeam);
+        (firestore.getDocs as Mock).mockResolvedValue({ docs: mockRoster });
 
         render(
             <MemoryRouter initialEntries={['/teams/team1']}>
@@ -98,9 +98,9 @@ describe('TeamDetail Page', () => {
             data: () => undefined,
         };
 
-        (firestore.getDoc as any).mockResolvedValue(mockTeam);
+        (firestore.getDoc as Mock).mockResolvedValue(mockTeam);
         // getDocs shouldn't be called if team doesn't exist, but safe to mock
-        (firestore.getDocs as any).mockResolvedValue({ docs: [] });
+        (firestore.getDocs as Mock).mockResolvedValue({ docs: [] });
 
         render(
             <MemoryRouter initialEntries={['/teams/invalid']}>
