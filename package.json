@@ -11,7 +11,8 @@
     "dependencies": {
         "firebase-admin": "^13.0.0",
         "puppeteer": "^23.0.0",
-        "axios": "^1.7.0"
+        "axios": "^1.7.0",
+        "google-auth-library": "^9.15.1"
     },
     "devDependencies": {
         "@types/bun": "latest"

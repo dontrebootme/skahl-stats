@@ -2,14 +2,21 @@ import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import puppeteer, { Browser, Page } from "puppeteer";
 import axios from "axios";
+import { GoogleAuth } from "google-auth-library";
 
 // 1. Initialize Firebase
 const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
 const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
 
+const args = process.argv.slice(2);
+const explicitDryRun = args.includes('--dry-run');
+
 let db;
 
-if (emulatorHost) {
+if (explicitDryRun) {
+    console.log("ℹ️ --dry-run flag detected. Skipping Firestore connection.");
+    db = null;
+} else if (emulatorHost) {
     console.log(`⚠️ FIRESTORE_EMULATOR_HOST detected (${emulatorHost}). Connecting to Emulator...`);
     initializeApp({ projectId: "skahl-stats" });
     db = getFirestore();
@@ -17,17 +24,23 @@ if (emulatorHost) {
     initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
     db = getFirestore();
 } else {
-    // ADC Fallback for local development
+    // ADC Fallback / Dry Run Logic
     try {
-        console.log("ℹ️ No env vars found. Attempting ADC connection...");
+        // Check if we have credentials (ADC, Metadata, etc.)
+        const auth = new GoogleAuth();
+        await auth.getApplicationDefault();
+
+        console.log("ℹ️ ADC Credentials found. Attempting connection...");
         initializeApp({ projectId: "spof-io" });
         db = getFirestore();
     } catch (e) {
+        console.warn("⚠️ No Valid Credentials found (Env, ADC, or Metadata).");
+        console.warn("➡️ Defaulting to DRY RUN mode (No DB writes).");
         db = null;
     }
 }
 
-if (!db) console.log("⚠️ No FIREBASE_SERVICE_ACCOUNT or FIRESTORE_EMULATOR_HOST found. Firestore writes will be skipped.");
+if (!db) console.log("⚠️ Running in DRY RUN mode. Firestore writes will be skipped.");
 
 const SNOKING_URL = "https://snokingahl.com";
 const SNOKING_TEAM_BASE = "https://snokingahl.com/schedule-stats/#/team";
