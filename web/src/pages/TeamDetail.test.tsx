@@ -56,8 +56,9 @@ describe('TeamDetail Page', () => {
         });
 
         // Test Goalie Highlighting Logic presence
-        const goaliePosition = screen.getByText('Goalie');
-        expect(goaliePosition).toHaveClass('text-amber-700');
+        const goalieBadge = screen.getByText('G');
+        expect(goalieBadge).toHaveClass('bg-amber-100');
+        expect(goalieBadge).toHaveClass('text-amber-800');
     });
 
     it('sorts roster by jersey number', async () => {

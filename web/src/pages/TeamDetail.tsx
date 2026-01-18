@@ -3,9 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { Container } from '../components/ui/container';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Avatar } from '../components/ui/Avatar';
+import { Badge } from '../components/ui/Badge';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
-import { ChevronLeft, Users } from 'lucide-react';
+import { ChevronLeft, Users, AlertCircle, Ban } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface Team {
@@ -19,6 +21,16 @@ interface Player {
     lastName: string;
     jerseyNumber: string;
     position: string;
+    image?: {
+        full_path: string;
+        formats?: { width: number; full_path: string }[];
+    };
+    isGoalie: boolean;
+    isAffiliate: boolean;
+    isInjured: boolean;
+    isSuspended: boolean;
+    isPlaying: boolean;
+    signedWaiver: boolean;
 }
 
 export default function TeamDetail() {
@@ -42,12 +54,21 @@ export default function TeamDetail() {
 
                 const rosterData = rosterSnap.docs.map(doc => {
                     const data = doc.data();
+                    const isGoalie = data.player_type?.is_goalie === 1 || data.player_type?.name_full === 'Goalie' || data.position === 'Goalie';
+
                     return {
                         id: doc.id,
                         firstName: data.name_first || '',
                         lastName: data.name_last || '',
                         jerseyNumber: data.jersey_number || data.player_number || '',
-                        position: data.player_type?.name_full || data.position || 'Player'
+                        position: data.player_type?.abbreviation || (isGoalie ? "G" : "F/D"),
+                        image: data.image,
+                        isGoalie: isGoalie,
+                        isAffiliate: !!data.is_affiliate,
+                        isInjured: !!data.is_injured,
+                        isSuspended: !!data.is_suspended,
+                        isPlaying: data.is_playing !== false,
+                        signedWaiver: !!data.is_signed_waiver,
                     };
                 }) as Player[];
 
@@ -117,8 +138,10 @@ export default function TeamDetail() {
                                 <thead>
                                     <tr className="border-b-2 border-primary/10">
                                         <th className="p-4 font-semibold text-muted-foreground uppercase tracking-wider w-20">#</th>
+                                        <th className="p-4 font-semibold text-muted-foreground uppercase tracking-wider w-16"></th>
                                         <th className="p-4 font-semibold text-muted-foreground uppercase tracking-wider">Player Name</th>
                                         <th className="p-4 font-semibold text-muted-foreground uppercase tracking-wider w-32">Position</th>
+                                        <th className="p-4 font-semibold text-muted-foreground uppercase tracking-wider w-32">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -130,29 +153,49 @@ export default function TeamDetail() {
                                                 index % 2 === 0 ? "bg-white" : "bg-muted/20"
                                             )}
                                         >
-                                            <td className="p-4 font-bold text-primary flex items-center">
+                                            <td className="p-4 font-bold text-primary">
                                                 <span className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">
                                                     {player.jerseyNumber || "-"}
                                                 </span>
                                             </td>
+                                            <td className="p-4">
+                                                 <Avatar
+                                                    src={player.image?.formats?.find(f => f.width === 200)?.full_path || player.image?.full_path}
+                                                    fallback={`${player.firstName.charAt(0)}${player.lastName.charAt(0)}`}
+                                                />
+                                            </td>
                                             <td className="p-4 font-medium text-lg">
-                                                {player.firstName} {player.lastName}
+                                                <div className="flex items-center gap-2">
+                                                    {player.firstName} {player.lastName}
+                                                    {player.isAffiliate && <Badge variant="affiliate">Sub</Badge>}
+                                                </div>
                                             </td>
                                             <td className="p-4">
-                                                <span className={cn(
-                                                    "inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset",
-                                                    player.position === 'Goalie'
-                                                        ? "bg-amber-50 text-amber-700 ring-amber-600/20"
-                                                        : "bg-blue-50 text-blue-700 ring-blue-700/10"
-                                                )}>
-                                                    {player.position || "Player"}
-                                                </span>
+                                                {player.isGoalie ? (
+                                                    <Badge variant="goalie">G</Badge>
+                                                ) : (
+                                                    <span className="text-muted-foreground text-sm">{player.position}</span>
+                                                )}
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex gap-2">
+                                                    {player.isInjured && (
+                                                        <Badge variant="injured" title="Injured">
+                                                            <AlertCircle className="w-3 h-3 mr-1" /> Injured
+                                                        </Badge>
+                                                    )}
+                                                    {player.isSuspended && (
+                                                        <Badge variant="suspended" title="Suspended">
+                                                            <Ban className="w-3 h-3 mr-1" /> Suspended
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
                                     {roster.length === 0 && (
                                         <tr>
-                                            <td colSpan={3} className="p-8 text-center text-muted-foreground">No players found on roster.</td>
+                                            <td colSpan={5} className="p-8 text-center text-muted-foreground">No players found on roster.</td>
                                         </tr>
                                     )}
                                 </tbody>

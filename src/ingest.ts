@@ -225,7 +225,27 @@ async function main() {
                             const rosterBatch = db.batch();
                             for (const player of players) {
                                 const pRef = db.collection('teams').doc(team.id).collection('roster').doc(player.id);
-                                rosterBatch.set(pRef, { ...player, rosterId: rosterId, lastUpdated: new Date() }, { merge: true });
+
+                                // Explicitly extract and structure fields to ensure they are preserved
+                                const playerData = {
+                                    ...player, // Keep base fields
+                                    // Ensure complex objects are preserved
+                                    image: player.image || null,
+                                    player_type: player.player_type || null,
+                                    // Status flags
+                                    is_affiliate: !!player.is_affiliate,
+                                    is_injured: !!player.is_injured,
+                                    is_suspended: !!player.is_suspended,
+                                    is_playing: !!player.is_playing,
+                                    is_signed_waiver: !!player.is_signed_waiver,
+                                    // Attributes
+                                    play_direction: player.play_direction || null,
+
+                                    rosterId: rosterId,
+                                    lastUpdated: new Date()
+                                };
+
+                                rosterBatch.set(pRef, playerData, { merge: true });
                             }
                             await rosterBatch.commit();
                         }
