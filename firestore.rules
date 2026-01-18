@@ -1,17 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow public read access to specific collections used by the web app
-    match /teams/{document=**} {
+    // Teams and their subcollections
+    match /teams/{teamId} {
       allow read: if true;
-      allow write: if false; // Only server-side admin SDK can write
+
+      match /roster/{player} {
+        allow read: if true;
+      }
     }
+
+    // Allow collection group query for roster
+    match /{path=**}/roster/{player} {
+      allow read: if true;
+    }
+
     match /games/{document=**} {
       allow read: if true;
       allow write: if false;
     }
     
-    // Default deny for everything else
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
