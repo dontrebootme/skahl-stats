@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Container } from '../components/ui/container';
 import { Card, CardContent } from '../components/ui/Card';
 import { db } from '../lib/firebase';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
 interface Game {
@@ -27,26 +27,16 @@ export default function Games() {
         const fetchGames = async () => {
             try {
                 // Fetch recent 50 games
-                // Note: Emulators sometimes struggle with complex indexes, so simple queries are safer usually,
-                // but orderBy is standard. If index missing, check console.
                 const gamesRef = collection(db, 'games');
                 // Creating a query against the collection
                 // We'll sort by starts_at descending to show newest first
-                // const q = query(gamesRef, orderBy('starts_at', 'desc'), limit(50));
+                const q = query(gamesRef, orderBy('starts_at', 'desc'), limit(50));
 
-                // For safety in this test env (if indexes missing), just fetch all and sort client side
-                const snapshot = await getDocs(gamesRef);
+                const snapshot = await getDocs(q);
                 const gamesData = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 })) as Game[];
-
-                // Sort client side for reliability in this specific task context
-                gamesData.sort((a, b) => {
-                    const dateA = new Date((a as any).starts_at || (a as any).started_at || 0).getTime();
-                    const dateB = new Date((b as any).starts_at || (b as any).started_at || 0).getTime();
-                    return dateB - dateA;
-                });
 
                 setGames(gamesData);
             } catch (error) {
