@@ -14,6 +14,9 @@ vi.mock('firebase/firestore', async () => {
         doc: vi.fn(),
         collection: vi.fn(),
         getFirestore: vi.fn(),
+        query: vi.fn(),
+        where: vi.fn(),
+        or: vi.fn(),
     };
 });
 
@@ -27,7 +30,7 @@ describe('TeamDetail Page', () => {
         vi.clearAllMocks();
     });
 
-    it('renders team name and roster', async () => {
+    it('renders team name, roster, and games', async () => {
         const mockTeam = {
             id: 'team1',
             exists: () => true,
@@ -39,8 +42,31 @@ describe('TeamDetail Page', () => {
             { id: 'p2', data: () => ({ name_first: 'Jane', name_last: 'Smith', player_number: '1', position: 'Goalie' }) },
         ];
 
+        const mockGames = [
+            {
+                id: 'g1',
+                data: () => ({
+                    starts_at: '2025-05-20T19:00:00Z',
+                    homeTeam: { id: 'team1', name: 'Test Team', score: 3 },
+                    visitingTeam: { id: 'team2', name: 'Opponent', score: 2 }
+                })
+            },
+            {
+                id: 'g2',
+                data: () => ({
+                    starts_at: '2025-05-27T19:00:00Z',
+                    homeTeam: { id: 'team2', name: 'Opponent' },
+                    visitingTeam: { id: 'team1', name: 'Test Team' }
+                })
+            }
+        ];
+
         (firestore.getDoc as any).mockResolvedValue(mockTeam);
-        (firestore.getDocs as any).mockResolvedValue({ docs: mockRoster });
+
+        // First call for roster, second for games
+        (firestore.getDocs as any)
+            .mockResolvedValueOnce({ docs: mockRoster })
+            .mockResolvedValueOnce({ docs: mockGames });
 
         render(
             <MemoryRouter initialEntries={['/teams/team1']}>
@@ -51,8 +77,17 @@ describe('TeamDetail Page', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByText('Test Team')).toBeInTheDocument();
+            expect(screen.getByRole('heading', { name: 'Test Team', level: 1 })).toBeInTheDocument();
             expect(screen.getByText('John Doe')).toBeInTheDocument();
+            expect(screen.getByText('Schedule / Results')).toBeInTheDocument();
+
+            // Verify games rendered
+            // Game 1: 3-2 (Test Team is home)
+            expect(screen.getAllByText('Opponent').length).toBeGreaterThan(0);
+            expect(screen.getByText('3')).toBeInTheDocument();
+            expect(screen.getByText('2')).toBeInTheDocument();
+
+            // Game 2: upcoming (Test Team is visitor)
         });
 
         // Test Goalie Highlighting Logic presence
@@ -73,7 +108,9 @@ describe('TeamDetail Page', () => {
         ];
 
         (firestore.getDoc as any).mockResolvedValue(mockTeam);
-        (firestore.getDocs as any).mockResolvedValue({ docs: mockRoster });
+        (firestore.getDocs as any)
+            .mockResolvedValueOnce({ docs: mockRoster })
+            .mockResolvedValueOnce({ docs: [] }); // No games
 
         render(
             <MemoryRouter initialEntries={['/teams/team1']}>
