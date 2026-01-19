@@ -3,6 +3,7 @@ import { Container } from '../components/ui/container';
 import { Card, CardContent } from '../components/ui/Card';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
+import { COLLECTIONS } from '../lib/collections';
 import { Calendar, Clock, MapPin } from 'lucide-react';
 
 interface Game {
@@ -29,7 +30,7 @@ export default function Games() {
                 // Fetch recent 50 games
                 // Note: Emulators sometimes struggle with complex indexes, so simple queries are safer usually,
                 // but orderBy is standard. If index missing, check console.
-                const gamesRef = collection(db, 'games');
+                const gamesRef = collection(db, COLLECTIONS.GAMES);
                 // Creating a query against the collection
                 // We'll sort by starts_at descending to show newest first
                 // const q = query(gamesRef, orderBy('starts_at', 'desc'), limit(50));

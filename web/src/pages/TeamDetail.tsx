@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Container } from '../components/ui/container';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { db } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs, query, where, or } from 'firebase/firestore';
+import { COLLECTIONS } from '../lib/collections';
 import { ChevronLeft, Users, Calendar, MapPin, Clock } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -40,6 +41,7 @@ interface Game {
 
 export default function TeamDetail() {
     const { teamId } = useParams<{ teamId: string }>();
+    const navigate = useNavigate();
     const [team, setTeam] = useState<Team | null>(null);
     const [roster, setRoster] = useState<Player[]>([]);
     const [games, setGames] = useState<Game[]>([]);
@@ -49,14 +51,15 @@ export default function TeamDetail() {
         const fetchData = async () => {
             if (!teamId) return;
             try {
-                const teamDoc = await getDoc(doc(db, 'teams', teamId));
+                const teamDoc = await getDoc(doc(db, COLLECTIONS.TEAMS, teamId));
                 if (teamDoc.exists()) {
                     setTeam({ id: teamDoc.id, ...teamDoc.data() } as Team);
                 }
 
                 // FETCH ROSTER FROM SUBCOLLECTION
                 // The ingestion script stores players at /teams/{teamId}/roster/{playerId}
-                const rosterSnap = await getDocs(collection(db, 'teams', teamId, 'roster'));
+                // We use COLLECTIONS.TEAMS which maps to "skahl_teams" (or prefix)
+                const rosterSnap = await getDocs(collection(db, COLLECTIONS.TEAMS, teamId, 'roster'));
 
                 const rosterData = rosterSnap.docs.map(doc => {
                     const data = doc.data();
@@ -171,9 +174,10 @@ export default function TeamDetail() {
                                         <tr
                                             key={player.id}
                                             className={cn(
-                                                "transition-colors hover:bg-muted/50",
+                                                "transition-colors hover:bg-muted/50 cursor-pointer",
                                                 index % 2 === 0 ? "bg-white" : "bg-muted/20"
                                             )}
+                                            onClick={() => navigate(`/teams/${teamId}/players/${player.id}`)}
                                         >
                                             <td className="p-4 font-bold text-primary flex items-center">
                                                 <span className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary">

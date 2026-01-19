@@ -11,6 +11,16 @@ service cloud.firestore {
       allow write: if false;
     }
     
+    // Namespaced Collections (SKAHL)
+    match /skahl_teams/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /skahl_games/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
     // Default deny for everything else
     match /{document=**} {
       allow read, write: if false;
