@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '../lib/collections';
 import { Link } from 'react-router-dom';
-import { Users } from 'lucide-react';
+import { Users, Filter } from 'lucide-react';
 
 interface Team {
     id: string;
@@ -20,7 +20,14 @@ interface Team {
 
 export default function Teams() {
     const [teams, setTeams] = useState<Team[]>([]);
+    const [filteredTeams, setFilteredTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Filters
+    const [leagues, setLeagues] = useState<string[]>([]);
+    const [divisions, setDivisions] = useState<string[]>([]);
+    const [selectedLeague, setSelectedLeague] = useState<string>('all');
+    const [selectedDivision, setSelectedDivision] = useState<string>('all');
 
     useEffect(() => {
         const fetchTeams = async () => {
@@ -30,7 +37,21 @@ export default function Teams() {
                     id: doc.id,
                     ...doc.data()
                 })) as Team[];
+
+                // Extract filters
+                const uniqueLeagues = new Set<string>();
+                const uniqueDivisions = new Set<string>();
+
+                teamsData.forEach(t => {
+                    if (t.league) uniqueLeagues.add(t.league);
+                    if (t.division) uniqueDivisions.add(t.division);
+                });
+
+                setLeagues(Array.from(uniqueLeagues).sort());
+                setDivisions(Array.from(uniqueDivisions).sort());
+
                 setTeams(teamsData);
+                setFilteredTeams(teamsData);
             } catch (error) {
                 console.error("Error fetching teams: ", error);
             } finally {
@@ -40,6 +61,21 @@ export default function Teams() {
 
         fetchTeams();
     }, []);
+
+    // Filter Logic
+    useEffect(() => {
+        let result = [...teams];
+
+        if (selectedLeague !== 'all') {
+            result = result.filter(t => t.league === selectedLeague);
+        }
+
+        if (selectedDivision !== 'all') {
+            result = result.filter(t => t.division === selectedDivision);
+        }
+
+        setFilteredTeams(result);
+    }, [teams, selectedLeague, selectedDivision]);
 
     if (loading) {
         return (
@@ -54,13 +90,50 @@ export default function Teams() {
     return (
         <Container>
             <div className="flex flex-col space-y-8">
-                <div>
-                    <h1 className="text-4xl font-bold tracking-tight">Teams</h1>
-                    <p className="text-muted-foreground mt-2 text-lg">Select a team to view their roster and stats.</p>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                    <div>
+                        <h1 className="text-4xl font-bold tracking-tight">Teams</h1>
+                        <p className="text-muted-foreground mt-2 text-lg">Select a team to view their roster and stats.</p>
+                    </div>
+
+                    {/* Filter Controls */}
+                    <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                        <div className="relative">
+                            <select
+                                className="w-full md:w-48 appearance-none bg-white border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-primary"
+                                value={selectedLeague}
+                                onChange={(e) => setSelectedLeague(e.target.value)}
+                            >
+                                <option value="all">All Leagues</option>
+                                {leagues.map(l => (
+                                    <option key={l} value={l}>{l}</option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <Filter className="h-4 w-4" />
+                            </div>
+                        </div>
+
+                        <div className="relative">
+                            <select
+                                className="w-full md:w-48 appearance-none bg-white border border-gray-200 text-gray-700 py-2 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-primary"
+                                value={selectedDivision}
+                                onChange={(e) => setSelectedDivision(e.target.value)}
+                            >
+                                <option value="all">All Divisions</option>
+                                {divisions.map(d => (
+                                    <option key={d} value={d}>{d}</option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                                <Filter className="h-4 w-4" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {teams.map((team) => (
+                    {filteredTeams.map((team) => (
                         <Link key={team.id} to={`/teams/${team.id}`}>
                             <Card className="h-full bg-white hover:bg-muted/50 transition-colors hover:shadow-md cursor-pointer overflow-hidden border-0 shadow-sm ring-1 ring-inset ring-gray-200">
                                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
@@ -93,8 +166,8 @@ export default function Teams() {
                         </Link>
                     ))}
 
-                    {teams.length === 0 && (
-                        <p className="text-muted-foreground col-span-full">No teams found in database.</p>
+                    {filteredTeams.length === 0 && (
+                        <p className="text-muted-foreground col-span-full text-center py-12">No teams found for the selected filters.</p>
                     )}
                 </div>
             </div>
