@@ -10,13 +10,27 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
     const navItems = [
         { name: 'Dashboard', path: '/' },
+        { name: 'Standings', path: '/standings' },
         { name: 'Teams', path: '/teams' },
-        { name: 'Games', path: '/games' },
+        { name: 'Schedule', path: '/games?tab=upcoming' },
+        { name: 'Scores', path: '/games?tab=results' },
     ];
+
+    const isActive = (path: string) => {
+        if (path === '/') return location.pathname === '/';
+        // Check if the current full path matches the link path
+        const currentPath = location.pathname + location.search;
+        // Simple match
+        if (currentPath === path) return true;
+        // Handle cases where we might land on /games without params (defaulting to upcoming)
+        if (path === '/games?tab=upcoming' && location.pathname === '/games' && !location.search) return true;
+        
+        return location.pathname === path; // Fallback for standard paths without params
+    };
 
     return (
         <div className="min-h-screen bg-muted/30 font-sans text-foreground">
-            <nav className="sticky top-0 z-50 w-full border-b border-border/5 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <nav className="sticky top-0 z-50 w-full border-b border-border bg-white">
                 <Container>
                     <div className="flex h-20 items-center justify-between">
                         <Link to="/" className="flex items-center space-x-2">
@@ -32,7 +46,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                                     to={item.path}
                                     className={cn(
                                         "text-sm font-medium transition-colors hover:text-primary",
-                                        location.pathname === item.path
+                                        isActive(item.path)
                                             ? "text-primary"
                                             : "text-muted-foreground"
                                     )}
@@ -63,7 +77,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                                     onClick={() => setIsOpen(false)}
                                     className={cn(
                                         "text-base font-medium transition-colors hover:text-primary",
-                                        location.pathname === item.path
+                                        isActive(item.path)
                                             ? "text-primary"
                                             : "text-muted-foreground"
                                     )}
