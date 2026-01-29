@@ -79,7 +79,7 @@ describe('Teams Page', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByText('No teams found in database.')).toBeInTheDocument();
+            expect(screen.getByText('No teams found for the selected filters.')).toBeInTheDocument();
         });
     });
 });
