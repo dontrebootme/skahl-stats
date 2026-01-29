@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Container } from '../components/ui/container';
 import { Card, CardContent } from '../components/ui/Card';
 import { db } from '../lib/firebase';
@@ -43,7 +43,7 @@ export default function Games() {
     const [games, setGames] = useState<Game[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
-    const [lastVisible, setLastVisible] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+    const lastVisible = useRef<QueryDocumentSnapshot<DocumentData> | null>(null);
     const [hasMore, setHasMore] = useState(true);
 
     // Filters
@@ -82,8 +82,8 @@ export default function Games() {
                 );
             }
 
-            if (isNextPage && lastVisible) {
-                q = query(q, startAfter(lastVisible));
+            if (isNextPage && lastVisible.current) {
+                q = query(q, startAfter(lastVisible.current));
             }
 
             const snapshot = await getDocs(q);
@@ -98,7 +98,7 @@ export default function Games() {
                 setGames(gamesData);
             }
 
-            setLastVisible(snapshot.docs[snapshot.docs.length - 1] || null);
+            lastVisible.current = snapshot.docs[snapshot.docs.length - 1] || null;
             setHasMore(snapshot.docs.length === PAGE_SIZE);
 
         } catch (error) {
@@ -107,12 +107,12 @@ export default function Games() {
             setLoading(false);
             setLoadingMore(false);
         }
-    }, [activeTab, lastVisible]);
+    }, [activeTab]);
 
     // Initial fetch and tab change
     useEffect(() => {
         setGames([]);
-        setLastVisible(null);
+        lastVisible.current = null;
         setHasMore(true);
         fetchGames(false);
     }, [activeTab, fetchGames]);
