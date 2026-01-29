@@ -27,7 +27,7 @@ describe('Teams Page', () => {
 
     it('shows loading state initially', () => {
         // Mock getDocs to never resolve immediately to test loading state
-        (firestore.getDocs as any).mockReturnValue(new Promise(() => { }));
+        vi.mocked(firestore.getDocs).mockReturnValue(new Promise<firestore.QuerySnapshot>(() => { }));
 
         render(
             <MemoryRouter>
@@ -49,9 +49,9 @@ describe('Teams Page', () => {
             { id: 'team2', data: () => ({ name: 'Team Two' }) },
         ];
 
-        (firestore.getDocs as any).mockResolvedValue({
+        vi.mocked(firestore.getDocs).mockResolvedValue({
             docs: mockTeams,
-        });
+        } as unknown as firestore.QuerySnapshot);
 
         render(
             <MemoryRouter>
@@ -68,9 +68,9 @@ describe('Teams Page', () => {
     });
 
     it('shows empty state when no teams found', async () => {
-        (firestore.getDocs as any).mockResolvedValue({
+        vi.mocked(firestore.getDocs).mockResolvedValue({
             docs: [],
-        });
+        } as unknown as firestore.QuerySnapshot);
 
         render(
             <MemoryRouter>
@@ -79,7 +79,7 @@ describe('Teams Page', () => {
         );
 
         await waitFor(() => {
-            expect(screen.getByText('No teams found in database.')).toBeInTheDocument();
+            expect(screen.getByText('No teams found for the selected filters.')).toBeInTheDocument();
         });
     });
 });

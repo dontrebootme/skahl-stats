@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import Dashboard from './pages/Dashboard';
+import Standings from './pages/Standings';
 import Teams from './pages/Teams';
 import Games from './pages/Games';
 import TeamDetail from './pages/TeamDetail';
@@ -12,6 +13,7 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/standings" element={<Standings />} />
           <Route path="/teams" element={<Teams />} />
           <Route path="/games" element={<Games />} />
           <Route path="/teams/:teamId" element={<TeamDetail />} />
