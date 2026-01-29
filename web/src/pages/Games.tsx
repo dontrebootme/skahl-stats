@@ -115,7 +115,7 @@ export default function Games() {
         setLastVisible(null);
         setHasMore(true);
         fetchGames(false);
-    }, [activeTab]);
+    }, [activeTab, fetchGames]);
 
     // Client-side filtering for search and dates (on top of paginated results)
     // Note: This only filters what is currently loaded. To search across all, 

@@ -176,17 +176,20 @@ export default function TeamDetail() {
 
                 {/* Tabs Navigation */}
                 <div className="flex space-x-1 border-b border-border">
-                    {[
-                        { id: 'roster', label: 'Roster', icon: Users },
-                        { id: 'schedule', label: 'Schedule', icon: Calendar },
-                        { id: 'results', label: 'Results', icon: Trophy },
-                    ].map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
+                    {(['roster', 'schedule', 'results'] as const).map((tabId) => {
+                        const tabConfig = {
+                            roster: { label: 'Roster', icon: Users },
+                            schedule: { label: 'Schedule', icon: Calendar },
+                            results: { label: 'Results', icon: Trophy },
+                        }[tabId];
+                        
+                        const Icon = tabConfig.icon;
+                        const isActive = activeTab === tabId;
+                        
                         return (
                             <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id as any)}
+                                key={tabId}
+                                onClick={() => setActiveTab(tabId)}
                                 className={cn(
                                     "flex items-center px-6 py-3 text-sm font-medium border-b-2 transition-colors duration-200",
                                     isActive
@@ -195,7 +198,7 @@ export default function TeamDetail() {
                                 )}
                             >
                                 <Icon className="w-4 h-4 mr-2" />
-                                {tab.label}
+                                {tabConfig.label}
                             </button>
                         );
                     })}
