@@ -5,13 +5,15 @@ import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '../lib/collections';
 import { Trophy, Filter } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, resolveScore } from '../lib/utils';
 
 interface Game {
     id: string;
     // Support both schema versions for safety
     starts_at?: string;
     started_at?: string;
+    home_team_score?: number;
+    visiting_team_score?: number;
     homeTeam?: {
         id: string;
         name: string;
@@ -99,16 +101,19 @@ export default function Standings() {
                 gamesSnapshot.forEach(doc => {
                     const game = doc.data() as Game;
 
+                    const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score);
+                    const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score);
+
                     // Skip games that haven't been played (no scores)
-                    if (game.homeTeam?.score === undefined || game.visitingTeam?.score === undefined) {
+                    if (hScore === null || vScore === null) {
                         return;
                     }
 
+                    // Ensure teams exist (handle missing team data gracefully)
+                    if (!game.homeTeam?.id || !game.visitingTeam?.id) return;
+
                     const home = initTeam(game.homeTeam.id, game.homeTeam.name);
                     const visitor = initTeam(game.visitingTeam.id, game.visitingTeam.name);
-
-                    const hScore = Number(game.homeTeam.score);
-                    const vScore = Number(game.visitingTeam.score);
 
                     // Update stats
                     home.gp++;

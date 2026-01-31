@@ -153,6 +153,13 @@ async function main() {
                     lastUpdated: new Date()
                 };
 
+                // Prevent overwriting detailed scores with potentially stale/empty summary data from schedule API
+                // We rely on ingest_game_details.ts to provide accurate final scores.
+                delete gameData.home_team_score;
+                delete gameData.visiting_team_score;
+                if (gameData.homeTeam) delete gameData.homeTeam.score;
+                if (gameData.visitingTeam) delete gameData.visitingTeam.score;
+
                 // Fallback for missing dates if possible (not much we can do if API is empty, but we verify)
                 if (!gameData.starts_at && !gameData.started_at) {
                     // console.warn(`   -> Game ${game.id} has no start date.`);
