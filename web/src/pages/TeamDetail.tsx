@@ -7,7 +7,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '../lib/collections';
 import { ChevronLeft, Users, Calendar, Trophy } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, resolveScore } from '../lib/utils';
 
 interface Team {
     id: string;
@@ -109,13 +109,6 @@ export default function TeamDetail() {
                 const now = new Date();
                 const past: Game[] = [];
                 const future: Game[] = [];
-
-                // Helper for score resolution
-                const resolveScore = (val: any): number | null => {
-                    if (val === null || val === undefined || val === '') return null;
-                    const num = Number(val);
-                    return isNaN(num) ? null : num;
-                };
 
                 teamGames.forEach(g => {
                     const gDate = new Date(g.starts_at || g.started_at || 0);
@@ -312,14 +305,8 @@ export default function TeamDetail() {
                 {activeTab === 'results' && (
                     <div className="space-y-4">
                         {results.map((game) => {
-                            const resolveScore = (val: any): number => {
-                                if (val === null || val === undefined || val === '') return 0;
-                                const num = Number(val);
-                                return isNaN(num) ? 0 : num;
-                            };
-
-                            const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score);
-                            const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score);
+                            const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score) ?? 0;
+                            const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score) ?? 0;
 
                             const isWin = (game.homeTeam?.id === teamId && hScore > vScore) ||
                                 (game.visitingTeam?.id === teamId && vScore > hScore);

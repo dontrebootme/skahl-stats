@@ -5,7 +5,7 @@ import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { COLLECTIONS } from '../lib/collections';
 import { Trophy, Filter } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, resolveScore } from '../lib/utils';
 
 interface Game {
     id: string;
@@ -100,13 +100,6 @@ export default function Standings() {
 
                 gamesSnapshot.forEach(doc => {
                     const game = doc.data() as Game;
-
-                    // Helper to safely resolve score from multiple potential sources
-                    const resolveScore = (val: any): number | null => {
-                        if (val === null || val === undefined || val === '') return null;
-                        const num = Number(val);
-                        return isNaN(num) ? null : num;
-                    };
 
                     const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score);
                     const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score);
