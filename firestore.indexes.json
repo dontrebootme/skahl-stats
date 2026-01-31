@@ -13,6 +13,20 @@
                     "order": "ASCENDING"
                 }
             ]
+        },
+        {
+            "collectionGroup": "skahl_games",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "has_details",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "starts_at",
+                    "order": "ASCENDING"
+                }
+            ]
         }
     ],
     "fieldOverrides": []
