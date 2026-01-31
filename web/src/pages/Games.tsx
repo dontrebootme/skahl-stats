@@ -252,10 +252,16 @@ export default function Games() {
                         const dateStr = game.starts_at || game.started_at;
                         const date = dateStr ? new Date(dateStr) : new Date();
                         
-                        // Use root scores if available, fallback to nested scores
-                        const hScore = game.home_team_score !== undefined ? game.home_team_score : game.homeTeam?.score;
-                        const vScore = game.visiting_team_score !== undefined ? game.visiting_team_score : game.visitingTeam?.score;
-                        const hasScore = hScore !== undefined && vScore !== undefined;
+                        // Helper to safely resolve score from multiple potential sources
+                        const resolveScore = (val: any): number | null => {
+                            if (val === null || val === undefined || val === '') return null;
+                            const num = Number(val);
+                            return isNaN(num) ? null : num;
+                        };
+                        
+                        const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score);
+                        const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score);
+                        const hasScore = hScore !== null && vScore !== null;
 
                         return (
                             <Card key={game.id} className="bg-white border-0 shadow-none ring-1 ring-gray-100 hover:scale-[1.01] transition-transform duration-200">

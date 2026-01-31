@@ -27,6 +27,8 @@ interface Game {
     starts_at?: string;
     started_at?: string;
     location?: string;
+    home_team_score?: number;
+    visiting_team_score?: number;
     homeTeam?: {
         id: string;
         name: string;
@@ -108,10 +110,19 @@ export default function TeamDetail() {
                 const past: Game[] = [];
                 const future: Game[] = [];
 
+                // Helper for score resolution
+                const resolveScore = (val: any): number | null => {
+                    if (val === null || val === undefined || val === '') return null;
+                    const num = Number(val);
+                    return isNaN(num) ? null : num;
+                };
+
                 teamGames.forEach(g => {
                     const gDate = new Date(g.starts_at || g.started_at || 0);
-                    // If it has a score, it's a result. Or if date is past.
-                    const hasScore = g.homeTeam?.score !== undefined && g.visitingTeam?.score !== undefined;
+                    
+                    const hScore = resolveScore(g.home_team_score ?? g.homeTeam?.score);
+                    const vScore = resolveScore(g.visiting_team_score ?? g.visitingTeam?.score);
+                    const hasScore = hScore !== null && vScore !== null;
 
                     if (hasScore || gDate < now) {
                         past.push(g);
@@ -301,9 +312,18 @@ export default function TeamDetail() {
                 {activeTab === 'results' && (
                     <div className="space-y-4">
                         {results.map((game) => {
-                            const isWin = (game.homeTeam?.id === teamId && (game.homeTeam?.score || 0) > (game.visitingTeam?.score || 0)) ||
-                                (game.visitingTeam?.id === teamId && (game.visitingTeam?.score || 0) > (game.homeTeam?.score || 0));
-                            const isTie = game.homeTeam?.score === game.visitingTeam?.score;
+                            const resolveScore = (val: any): number => {
+                                if (val === null || val === undefined || val === '') return 0;
+                                const num = Number(val);
+                                return isNaN(num) ? 0 : num;
+                            };
+
+                            const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score);
+                            const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score);
+
+                            const isWin = (game.homeTeam?.id === teamId && hScore > vScore) ||
+                                (game.visitingTeam?.id === teamId && vScore > hScore);
+                            const isTie = hScore === vScore;
 
                             return (
                                 <Card key={game.id} className="border-0 bg-white shadow-none ring-1 ring-gray-100 p-6 hover:bg-muted/10 transition-colors">
@@ -325,11 +345,11 @@ export default function TeamDetail() {
                                                 <span className={cn("font-bold text-lg", game.visitingTeam?.id === teamId && "text-primary")}>
                                                     {game.visitingTeam?.name}
                                                 </span>
-                                                <span className="text-2xl font-black">{game.visitingTeam?.score}</span>
+                                                <span className="text-2xl font-black">{vScore}</span>
                                             </div>
                                             <span className="text-muted-foreground">-</span>
                                             <div className="flex items-center gap-4 w-1/3 justify-start">
-                                                <span className="text-2xl font-black">{game.homeTeam?.score}</span>
+                                                <span className="text-2xl font-black">{hScore}</span>
                                                 <span className={cn("font-bold text-lg", game.homeTeam?.id === teamId && "text-primary")}>
                                                     {game.homeTeam?.name}
                                                 </span>

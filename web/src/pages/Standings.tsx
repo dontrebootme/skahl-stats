@@ -12,6 +12,8 @@ interface Game {
     // Support both schema versions for safety
     starts_at?: string;
     started_at?: string;
+    home_team_score?: number;
+    visiting_team_score?: number;
     homeTeam?: {
         id: string;
         name: string;
@@ -99,16 +101,26 @@ export default function Standings() {
                 gamesSnapshot.forEach(doc => {
                     const game = doc.data() as Game;
 
+                    // Helper to safely resolve score from multiple potential sources
+                    const resolveScore = (val: any): number | null => {
+                        if (val === null || val === undefined || val === '') return null;
+                        const num = Number(val);
+                        return isNaN(num) ? null : num;
+                    };
+
+                    const hScore = resolveScore(game.home_team_score ?? game.homeTeam?.score);
+                    const vScore = resolveScore(game.visiting_team_score ?? game.visitingTeam?.score);
+
                     // Skip games that haven't been played (no scores)
-                    if (game.homeTeam?.score === undefined || game.visitingTeam?.score === undefined) {
+                    if (hScore === null || vScore === null) {
                         return;
                     }
 
+                    // Ensure teams exist (handle missing team data gracefully)
+                    if (!game.homeTeam?.id || !game.visitingTeam?.id) return;
+
                     const home = initTeam(game.homeTeam.id, game.homeTeam.name);
                     const visitor = initTeam(game.visitingTeam.id, game.visitingTeam.name);
-
-                    const hScore = Number(game.homeTeam.score);
-                    const vScore = Number(game.visitingTeam.score);
 
                     // Update stats
                     home.gp++;
