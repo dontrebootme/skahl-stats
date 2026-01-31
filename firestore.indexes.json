@@ -2,7 +2,7 @@
     "indexes": [
         {
             "collectionGroup": "skahl_games",
-            "queryScope": "COLLECTION",
+            "queryScope": "COLLECTION_GROUP",
             "fields": [
                 {
                     "fieldPath": "has_details",
