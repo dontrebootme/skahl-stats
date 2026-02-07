@@ -1,5 +1,6 @@
 import { Firestore } from "firebase-admin/firestore";
 import { COLLECTIONS } from "./collections";
+import { sanitizeDocId } from "./lib/firebaseAdmin";
 
 interface PlayerStats {
     goals: number;
@@ -92,9 +93,9 @@ export async function aggregateStats(db: Firestore): Promise<void> {
         try {
             const playerRef = db
                 .collection(COLLECTIONS.TEAMS)
-                .doc(stats.teamId)
+                .doc(sanitizeDocId(stats.teamId))
                 .collection("roster")
-                .doc(playerId);
+                .doc(sanitizeDocId(playerId));
 
             const playerDoc = await playerRef.get();
             if (playerDoc.exists) {

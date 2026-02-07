@@ -2,9 +2,11 @@ import { Firestore } from "firebase-admin/firestore";
 import axios from "axios";
 import { COLLECTIONS } from "./collections";
 import { CONFIG } from "./config";
+import { sanitizeDocId } from "./lib/firebaseAdmin";
 
 const API_BASE = CONFIG.urls.apiBase;
 const ORG_ID = CONFIG.orgId;
+const ROSTER_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface IngestResult {
     gamesWritten: number;
@@ -96,7 +98,7 @@ export async function ingestScheduleAndTeams(
     let count = 0;
     for (const game of allGames) {
         if (!game.id) continue;
-        const docRef = db.collection(COLLECTIONS.GAMES).doc(game.id);
+        const docRef = db.collection(COLLECTIONS.GAMES).doc(sanitizeDocId(game.id));
 
         const gameData = {
             ...game,
@@ -126,20 +128,20 @@ export async function ingestScheduleAndTeams(
     // --- Fetch & Save Teams + Rosters ---
     console.log(`Found ${teamsMap.size} unique teams. Fetching Rosters...`);
     const teams = Array.from(teamsMap.values());
-    const ROSTER_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
     for (const team of teams) {
         console.log(`Processing Team: ${team.name} (${team.id})...`);
 
         // Save Team Metadata
+        const teamDocId = sanitizeDocId(team.id);
         await db
             .collection(COLLECTIONS.TEAMS)
-            .doc(team.id)
+            .doc(teamDocId)
             .set({ ...team, lastUpdated: new Date() }, { merge: true });
 
         // Check roster freshness (skip if synced < 24h ago, unless --force)
         if (!options.force) {
-            const teamDoc = await db.collection(COLLECTIONS.TEAMS).doc(team.id).get();
+            const teamDoc = await db.collection(COLLECTIONS.TEAMS).doc(teamDocId).get();
             const lastRosterSync = teamDoc.data()?.lastRosterSync?.toDate?.();
             if (lastRosterSync && Date.now() - lastRosterSync.getTime() < ROSTER_TTL_MS) {
                 console.log(`   -> Roster synced ${Math.round((Date.now() - lastRosterSync.getTime()) / 60000)}m ago. Skipping.`);
@@ -193,9 +195,9 @@ export async function ingestScheduleAndTeams(
                     for (const player of players) {
                         const pRef = db
                             .collection(COLLECTIONS.TEAMS)
-                            .doc(team.id)
+                            .doc(teamDocId)
                             .collection("roster")
-                            .doc(player.id);
+                            .doc(sanitizeDocId(player.id));
                         rosterBatch.set(
                             pRef,
                             { ...player, rosterId: rosterId, lastUpdated: new Date() },
@@ -207,7 +209,7 @@ export async function ingestScheduleAndTeams(
                     // Mark roster as synced
                     await db
                         .collection(COLLECTIONS.TEAMS)
-                        .doc(team.id)
+                        .doc(teamDocId)
                         .update({ lastRosterSync: new Date() });
                 } else {
                     console.warn(`   -> ⚠️ Could not find player array in response.`);

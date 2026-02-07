@@ -2,8 +2,11 @@ import { Firestore } from "firebase-admin/firestore";
 import axios from "axios";
 import { COLLECTIONS } from "./collections";
 import { CONFIG } from "./config";
+import { sanitizeDocId } from "./lib/firebaseAdmin";
 
 const API_BASE = CONFIG.urls.apiBase;
+const LOOKBACK_DAYS = 14;
+const LOOKBACK_MS = LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
 
 /**
  * Fetches game details (periods, goals, penalties) for recent games that
@@ -18,15 +21,15 @@ export async function ingestGameDetails(
 ): Promise<number> {
     console.log("🚀 Starting Game Details Ingestion...");
 
-    // Scope to last 14 days to limit Firestore reads
+    // Scope to recent games to limit Firestore reads
     const now = new Date();
-    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+    const lookbackDate = new Date(now.getTime() - LOOKBACK_MS);
 
-    console.log(`Querying for games between ${twoWeeksAgo.toISOString()} and ${now.toISOString()} missing details...`);
+    console.log(`Querying for games in last ${LOOKBACK_DAYS} days missing details...`);
 
     const gamesSnapshot = await db
         .collection(COLLECTIONS.GAMES)
-        .where("starts_at", ">", twoWeeksAgo.toISOString())
+        .where("starts_at", ">", lookbackDate.toISOString())
         .where("starts_at", "<", now.toISOString())
         .orderBy("starts_at", "desc")
         .get();
@@ -55,13 +58,13 @@ export async function ingestGameDetails(
             }
 
             const batch = db.batch();
-            const gameRef = db.collection(COLLECTIONS.GAMES).doc(gameId);
+            const gameRef = db.collection(COLLECTIONS.GAMES).doc(sanitizeDocId(gameId));
 
             // Periods
             if (data.periods) {
                 const periodsCol = gameRef.collection("periods");
                 for (const p of data.periods) {
-                    batch.set(periodsCol.doc(p.id), p, { merge: true });
+                    batch.set(periodsCol.doc(sanitizeDocId(p.id)), p, { merge: true });
                 }
             }
 
@@ -69,7 +72,7 @@ export async function ingestGameDetails(
             if (data.goals) {
                 const goalsCol = gameRef.collection("goals");
                 for (const g of data.goals) {
-                    batch.set(goalsCol.doc(g.id), g, { merge: true });
+                    batch.set(goalsCol.doc(sanitizeDocId(g.id)), g, { merge: true });
                 }
             }
 
@@ -77,7 +80,7 @@ export async function ingestGameDetails(
             if (data.offenses) {
                 const penaltiesCol = gameRef.collection("penalties");
                 for (const o of data.offenses) {
-                    batch.set(penaltiesCol.doc(o.id), o, { merge: true });
+                    batch.set(penaltiesCol.doc(sanitizeDocId(o.id)), o, { merge: true });
                 }
             }
 

@@ -3,6 +3,26 @@ import { getFirestore, Firestore } from "firebase-admin/firestore";
 import { CONFIG } from "../config";
 
 /**
+ * Validates and sanitizes an ID for use as a Firestore document ID.
+ * Firestore document IDs cannot contain forward slashes, which could
+ * otherwise enable path traversal attacks when IDs come from external APIs.
+ *
+ * Throws if the ID is invalid. Returns the ID unchanged if valid.
+ */
+export function sanitizeDocId(id: string): string {
+    if (!id || typeof id !== "string") {
+        throw new Error("Invalid document ID: must be a non-empty string");
+    }
+    if (id.includes("/")) {
+        throw new Error(`Invalid document ID: contains illegal character '/': ${id}`);
+    }
+    if (id === "." || id === "..") {
+        throw new Error(`Invalid document ID: cannot be '.' or '..'`);
+    }
+    return id;
+}
+
+/**
  * Returns a Firestore instance, initializing the Firebase app if needed.
  * Handles: emulator detection, service account env var, and ADC fallback.
  */
