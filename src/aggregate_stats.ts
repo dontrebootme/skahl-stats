@@ -110,8 +110,8 @@ export async function aggregateStats(db: Firestore): Promise<void> {
                 });
                 updateCount++;
             }
-        } catch {
-            // Player doc may not exist if roster hasn't been synced yet
+        } catch (e) {
+            console.error(`   ❌ Failed to update player ${playerId}:`, e);
         }
     }
 
