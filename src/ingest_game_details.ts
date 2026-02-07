@@ -116,17 +116,11 @@ if (import.meta.main) {
     const { getDb } = await import("./lib/firebaseAdmin");
     const { getToken, buildHeaders } = await import("./lib/getToken");
 
-    const db = getDb();
-    if (!db) {
-        console.error("❌ No database connection. Exiting.");
-        process.exit(1);
-    }
-
     const token = await getToken();
     const headers = buildHeaders(token);
 
     try {
-        const count = await ingestGameDetails(db, headers);
+        const count = await ingestGameDetails(getDb(), headers);
         console.log(`Done. ${count} games processed.`);
     } catch (error) {
         if (axios.isAxiosError(error)) {

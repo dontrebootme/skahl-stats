@@ -122,12 +122,5 @@ export async function aggregateStats(db: Firestore): Promise<void> {
 // --- Standalone entry point ---
 if (import.meta.main) {
     const { getDb } = await import("./lib/firebaseAdmin");
-
-    const db = getDb();
-    if (!db) {
-        console.error("❌ No database connection. Exiting.");
-        process.exit(1);
-    }
-
-    await aggregateStats(db);
+    await aggregateStats(getDb());
 }

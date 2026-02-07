@@ -153,7 +153,7 @@ export async function ingestScheduleAndTeams(
         let rosterId: string | null = null;
         try {
             const rosterMetaRes = await axios.get(
-                `${API_BASE}/teams/${team.id}/rosters`,
+                `${API_BASE}/teams/${sanitizeDocId(team.id)}/rosters`,
                 { headers },
             );
             const rosterMetas = Array.isArray(rosterMetaRes.data)
@@ -175,7 +175,7 @@ export async function ingestScheduleAndTeams(
         if (rosterId) {
             try {
                 const playersRes = await axios.get(
-                    `${API_BASE}/teams/${team.id}/rosters/${rosterId}/players`,
+                    `${API_BASE}/teams/${sanitizeDocId(team.id)}/rosters/${sanitizeDocId(rosterId)}/players`,
                     { headers },
                 );
 
@@ -231,18 +231,12 @@ if (import.meta.main) {
     const { getDb } = await import("./lib/firebaseAdmin");
     const { getToken, buildHeaders } = await import("./lib/getToken");
 
-    const db = getDb();
-    if (!db) {
-        console.error("❌ No database connection. Exiting.");
-        process.exit(1);
-    }
-
     const token = await getToken();
     const headers = buildHeaders(token);
     const force = process.argv.includes("--force");
 
     try {
-        const result = await ingestScheduleAndTeams(db, headers, { force });
+        const result = await ingestScheduleAndTeams(getDb(), headers, { force });
         if (!result.schedule) {
             console.log("No active schedule. Exiting.");
         }
