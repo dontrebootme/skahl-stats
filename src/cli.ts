@@ -1,30 +1,5 @@
-import { initializeApp, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { CONFIG } from "./config";
+import { getDb } from "./lib/firebaseAdmin";
 import { COLLECTIONS } from "./collections";
-
-// --- Helper Functions ---
-function getDb() {
-    // 1. Initialize Firebase
-    const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-    const appOptions: any = { projectId: CONFIG.projectId };
-
-    if (serviceAccountEnv) {
-        try {
-            appOptions.credential = cert(JSON.parse(serviceAccountEnv));
-        } catch (e) {
-            console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT", e);
-        }
-    }
-
-    // Avoid double initialization
-    try {
-        initializeApp(appOptions);
-    } catch {
-        // App likely already initialized
-    }
-    return getFirestore();
-}
 
 async function purgeGames() {
     const db = getDb();

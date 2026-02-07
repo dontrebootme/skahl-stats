@@ -1,89 +1,47 @@
-import { initializeApp, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import puppeteer from "puppeteer";
+import { Firestore } from "firebase-admin/firestore";
 import axios from "axios";
 import { COLLECTIONS } from "./collections";
+import { CONFIG } from "./config";
 
-// 1. Initialize Firebase
-const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
+const API_BASE = CONFIG.urls.apiBase;
 
-let db: any;
-
-if (emulatorHost) {
-    initializeApp({ projectId: "skahl-stats" });
-    db = getFirestore();
-} else if (serviceAccountEnv) {
-    initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
-    db = getFirestore();
-} else {
-    try {
-        initializeApp({ projectId: "spof-io" });
-        db = getFirestore();
-    } catch (e) {
-        db = null;
-    }
-}
-
-const SNOKING_URL = "https://snokingahl.com";
-const API_BASE = "https://metal-api.sportninja.net/v1";
-
-async function main() {
-    if (!db) {
-        console.error("❌ No database connection. Exiting.");
-        process.exit(1);
-    }
-
+/**
+ * Fetches game details (periods, goals, penalties) for recent games that
+ * don't have them yet. Scopes the query to the last 14 days to avoid
+ * scanning the entire games collection.
+ *
+ * Returns the number of games that were processed.
+ */
+export async function ingestGameDetails(
+    db: Firestore,
+    headers: Record<string, string>,
+): Promise<number> {
     console.log("🚀 Starting Game Details Ingestion...");
 
-    // --- STEP 1: Get Token ---
-    console.log("Launching headless browser for token...");
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-    const page = await browser.newPage();
+    // Scope to last 14 days to limit Firestore reads
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
-    let token: string | null = null;
-    try {
-        await page.goto(SNOKING_URL, { waitUntil: 'networkidle2' });
-        // Wait for token to be set by the widget
-        for (let i = 0; i < 20; i++) {
-            token = await page.evaluate(() => localStorage.getItem('session_token_iframe'));
-            if (token) break;
-            await new Promise(r => setTimeout(r, 1000));
-        }
-        if (!token) throw new Error("Token not found after 20s.");
-        console.log("✅ Token acquired.");
-    } catch (error) {
-        console.error("❌ Failed to get token:", error);
-        await browser.close();
-        process.exit(1);
-    } finally {
-        await browser.close();
-    }
+    console.log(`Querying for games between ${twoWeeksAgo.toISOString()} and ${now.toISOString()} missing details...`);
 
-    const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/json',
-        'Origin': 'https://snokingahl.com',
-        'Referer': 'https://snokingahl.com/'
-    };
-
-    // --- STEP 2: Identify Games needing details ---
-    // Fetch games that started in the past and don't have details yet
-    const now = new Date().toISOString();
-    console.log(`Querying for games that started before ${now} and missing details...`);
-    
-    const gamesSnapshot = await db.collection(COLLECTIONS.GAMES)
-        .where('starts_at', '<', now)
-        .where('has_details', '!=', true)
-        .limit(50) // Process in chunks to avoid hitting API rate limits or long execution
+    const gamesSnapshot = await db
+        .collection(COLLECTIONS.GAMES)
+        .where("starts_at", ">", twoWeeksAgo.toISOString())
+        .where("starts_at", "<", now.toISOString())
+        .orderBy("starts_at", "desc")
         .get();
 
-    console.log(`Found ${gamesSnapshot.size} games to process.`);
+    // Filter in code for games that don't have details yet
+    const gamesToProcess = gamesSnapshot.docs.filter(
+        (doc: any) => !doc.data().has_details,
+    );
+    console.log(
+        `Found ${gamesToProcess.length} games to process (out of ${gamesSnapshot.size} recent past games).`,
+    );
 
-    for (const gameDoc of gamesSnapshot.docs) {
+    let processedCount = 0;
+
+    for (const gameDoc of gamesToProcess) {
         const gameId = gameDoc.id;
         console.log(`Processing game ${gameId}...`);
 
@@ -99,25 +57,25 @@ async function main() {
             const batch = db.batch();
             const gameRef = db.collection(COLLECTIONS.GAMES).doc(gameId);
 
-            // 1. Periods
+            // Periods
             if (data.periods) {
-                const periodsCol = gameRef.collection('periods');
+                const periodsCol = gameRef.collection("periods");
                 for (const p of data.periods) {
                     batch.set(periodsCol.doc(p.id), p, { merge: true });
                 }
             }
 
-            // 2. Goals
+            // Goals
             if (data.goals) {
-                const goalsCol = gameRef.collection('goals');
+                const goalsCol = gameRef.collection("goals");
                 for (const g of data.goals) {
                     batch.set(goalsCol.doc(g.id), g, { merge: true });
                 }
             }
 
-            // 3. Offenses (Penalties)
+            // Offenses (Penalties)
             if (data.offenses) {
-                const penaltiesCol = gameRef.collection('penalties');
+                const penaltiesCol = gameRef.collection("penalties");
                 for (const o of data.offenses) {
                     batch.set(penaltiesCol.doc(o.id), o, { merge: true });
                 }
@@ -127,24 +85,52 @@ async function main() {
             batch.update(gameRef, {
                 has_details: true,
                 lastDetailUpdate: new Date(),
-                // Also sync scores just in case they were updated
                 home_team_score: data.home_team_score,
                 visiting_team_score: data.visiting_team_score,
-                game_status_id: data.game_status_id
+                game_status_id: data.game_status_id,
             });
 
             await batch.commit();
+            processedCount++;
             console.log(`   ✅ Saved details for game ${gameId}`);
 
             // Small delay to be nice to the API
-            await new Promise(r => setTimeout(r, 500));
-
+            await new Promise((r) => setTimeout(r, 500));
         } catch (error: any) {
-            console.error(`   ❌ Error processing game ${gameId}:`, error.response?.status || error.message);
+            console.error(
+                `   ❌ Error processing game ${gameId}:`,
+                error.response?.status || error.message,
+            );
         }
     }
 
-    console.log("🏁 Ingestion of game details complete.");
+    console.log(`🏁 Game details ingestion complete. Processed ${processedCount} games.`);
+    return processedCount;
 }
 
-main();
+// --- Standalone entry point ---
+if (import.meta.main) {
+    const { getDb } = await import("./lib/firebaseAdmin");
+    const { getToken, buildHeaders } = await import("./lib/getToken");
+
+    const db = getDb();
+    if (!db) {
+        console.error("❌ No database connection. Exiting.");
+        process.exit(1);
+    }
+
+    const token = await getToken();
+    const headers = buildHeaders(token);
+
+    try {
+        const count = await ingestGameDetails(db, headers);
+        console.log(`Done. ${count} games processed.`);
+    } catch (error) {
+        if (axios.isAxiosError(error)) {
+            console.error("❌ API Error:", error.response?.status, error.response?.statusText);
+        } else {
+            console.error("❌ Error:", error);
+        }
+        process.exit(1);
+    }
+}

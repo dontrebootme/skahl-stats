@@ -1,27 +1,5 @@
-import { initializeApp, cert } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { Firestore } from "firebase-admin/firestore";
 import { COLLECTIONS } from "./collections";
-
-// 1. Initialize Firebase
-const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT;
-const emulatorHost = process.env.FIRESTORE_EMULATOR_HOST;
-
-let db: any;
-
-if (emulatorHost) {
-    initializeApp({ projectId: "skahl-stats" });
-    db = getFirestore();
-} else if (serviceAccountEnv) {
-    initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
-    db = getFirestore();
-} else {
-    try {
-        initializeApp({ projectId: "spof-io" });
-        db = getFirestore();
-    } catch (e) {
-        db = null;
-    }
-}
 
 interface PlayerStats {
     goals: number;
@@ -32,12 +10,12 @@ interface PlayerStats {
     teamId: string;
 }
 
-async function main() {
-    if (!db) {
-        console.error("❌ No database connection. Exiting.");
-        process.exit(1);
-    }
-
+/**
+ * Recalculates player stats (goals, assists, points, PIM) from all games
+ * that have details, and writes the aggregated stats to each player's
+ * roster document.
+ */
+export async function aggregateStats(db: Firestore): Promise<void> {
     console.log("📊 Starting Stats Aggregation...");
 
     const playerStatsMap = new Map<string, PlayerStats>();
@@ -50,25 +28,24 @@ async function main() {
                 points: 0,
                 pim: 0,
                 gamesPlayed: 0,
-                teamId
+                teamId,
             });
         }
         return playerStatsMap.get(playerId)!;
     };
 
-    // 1. Fetch all games with details
+    // Fetch all games with details
     console.log("Fetching games with details...");
-    const gamesSnapshot = await db.collection(COLLECTIONS.GAMES)
-        .where('has_details', '==', true)
+    const gamesSnapshot = await db
+        .collection(COLLECTIONS.GAMES)
+        .where("has_details", "==", true)
         .get();
 
     console.log(`Processing ${gamesSnapshot.size} games...`);
 
     for (const gameDoc of gamesSnapshot.docs) {
-        const gameId = gameDoc.id;
-        
         // --- GOALS ---
-        const goalsSnapshot = await gameDoc.ref.collection('goals').get();
+        const goalsSnapshot = await gameDoc.ref.collection("goals").get();
         goalsSnapshot.forEach((doc: any) => {
             const goal = doc.data();
             const teamId = goal.shot?.team_id;
@@ -93,7 +70,7 @@ async function main() {
         });
 
         // --- PENALTIES ---
-        const penaltiesSnapshot = await gameDoc.ref.collection('penalties').get();
+        const penaltiesSnapshot = await gameDoc.ref.collection("penalties").get();
         penaltiesSnapshot.forEach((doc: any) => {
             const penalty = doc.data();
             const playerId = penalty.player_id;
@@ -105,22 +82,20 @@ async function main() {
                 stats.pim += minutes;
             }
         });
-
-        // --- GP (Games Played) ---
-        // Note: For now, we only know a player played if they were on the scoresheet.
-        // To be accurate, we'd need the full game roster.
-        // A placeholder for GP could be implemented later.
     }
 
     console.log(`Aggregated stats for ${playerStatsMap.size} players.`);
 
-    // 2. Update Player Documents
+    // Update Player Documents
     let updateCount = 0;
     for (const [playerId, stats] of playerStatsMap.entries()) {
         try {
-            const playerRef = db.collection(COLLECTIONS.TEAMS).doc(stats.teamId).collection('roster').doc(playerId);
-            
-            // Check if player exists first to avoid creating orphaned stats
+            const playerRef = db
+                .collection(COLLECTIONS.TEAMS)
+                .doc(stats.teamId)
+                .collection("roster")
+                .doc(playerId);
+
             const playerDoc = await playerRef.get();
             if (playerDoc.exists) {
                 await playerRef.update({
@@ -129,13 +104,13 @@ async function main() {
                         assists: stats.assists,
                         points: stats.points,
                         pim: stats.pim,
-                        lastUpdated: new Date()
-                    }
+                        lastUpdated: new Date(),
+                    },
                 });
                 updateCount++;
             }
-        } catch (e: any) {
-            // console.error(`   ❌ Failed to update player ${playerId}: ${e.message}`);
+        } catch {
+            // Player doc may not exist if roster hasn't been synced yet
         }
     }
 
@@ -143,4 +118,15 @@ async function main() {
     console.log("🏁 Stats aggregation complete.");
 }
 
-main();
+// --- Standalone entry point ---
+if (import.meta.main) {
+    const { getDb } = await import("./lib/firebaseAdmin");
+
+    const db = getDb();
+    if (!db) {
+        console.error("❌ No database connection. Exiting.");
+        process.exit(1);
+    }
+
+    await aggregateStats(db);
+}
