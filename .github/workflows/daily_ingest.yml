@@ -6,10 +6,14 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: ingest-pipeline
+  cancel-in-progress: true
+
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -18,20 +22,26 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
+      - name: Cache Puppeteer Chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('package.json') }}
+          restore-keys: |
+            puppeteer-${{ runner.os }}-
+
       - name: Install Dependencies
         run: bun install
 
-      - name: 1. Ingest Schedule & Teams
+      - name: Run Ingest Pipeline
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
-        run: bun run src/ingest.ts
-
-      - name: 2. Ingest Game Details
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
-        run: bun run src/ingest_game_details.ts
-
-      - name: 3. Aggregate Player Stats
-        env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
-        run: bun run src/aggregate_stats.ts
+        run: bun run src/pipeline.ts
