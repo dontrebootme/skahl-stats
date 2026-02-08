@@ -1,4 +1,4 @@
-import { Firestore } from "firebase-admin/firestore";
+import { Firestore, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import axios from "axios";
 import { COLLECTIONS } from "./collections";
 import { CONFIG } from "./config";
@@ -36,7 +36,7 @@ export async function ingestGameDetails(
 
     // Filter in code for games that don't have details yet
     const gamesToProcess = gamesSnapshot.docs.filter(
-        (doc: any) => !doc.data().has_details,
+        (doc: QueryDocumentSnapshot) => !doc.data().has_details,
     );
     console.log(
         `Found ${gamesToProcess.length} games to process (out of ${gamesSnapshot.size} recent past games).`,

@@ -1,4 +1,4 @@
-import { Firestore } from "firebase-admin/firestore";
+import { Firestore, QueryDocumentSnapshot } from "firebase-admin/firestore";
 import { COLLECTIONS } from "./collections";
 import { sanitizeDocId } from "./lib/firebaseAdmin";
 
@@ -47,7 +47,7 @@ export async function aggregateStats(db: Firestore): Promise<void> {
     for (const gameDoc of gamesSnapshot.docs) {
         // --- GOALS ---
         const goalsSnapshot = await gameDoc.ref.collection("goals").get();
-        goalsSnapshot.forEach((doc: any) => {
+        goalsSnapshot.forEach((doc: QueryDocumentSnapshot) => {
             const goal = doc.data();
             const teamId = goal.shot?.team_id;
             const scorerId = goal.shot?.player_id;
@@ -72,7 +72,7 @@ export async function aggregateStats(db: Firestore): Promise<void> {
 
         // --- PENALTIES ---
         const penaltiesSnapshot = await gameDoc.ref.collection("penalties").get();
-        penaltiesSnapshot.forEach((doc: any) => {
+        penaltiesSnapshot.forEach((doc: QueryDocumentSnapshot) => {
             const penalty = doc.data();
             const playerId = penalty.player_id;
             const teamId = penalty.team_id;

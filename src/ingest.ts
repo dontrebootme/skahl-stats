@@ -8,6 +8,30 @@ const API_BASE = CONFIG.urls.apiBase;
 const ORG_ID = CONFIG.orgId;
 const ROSTER_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
+/**
+ * Extracts an array from an inconsistent API response structure.
+ * Handles: direct array, { data: [...] }, { data: { players: [...] } }, { data: { data: [...] } }
+ */
+function extractDataArray(responseBody: unknown): unknown[] {
+    if (Array.isArray(responseBody)) {
+        return responseBody;
+    }
+    const body = responseBody as Record<string, unknown>;
+    if (body?.data) {
+        if (Array.isArray(body.data)) {
+            return body.data;
+        }
+        const nested = body.data as Record<string, unknown>;
+        if (Array.isArray(nested?.players)) {
+            return nested.players;
+        }
+        if (Array.isArray(nested?.data)) {
+            return nested.data;
+        }
+    }
+    return [];
+}
+
 export interface IngestResult {
     gamesWritten: number;
     schedule: { id: string; name: string; season_id?: string } | null;
@@ -15,6 +39,14 @@ export interface IngestResult {
 
 export interface IngestOptions {
     force?: boolean;
+}
+
+interface Schedule {
+    id: string;
+    name: string;
+    starts_at: string;
+    ends_at: string;
+    season_id?: string;
 }
 
 /**
@@ -37,7 +69,7 @@ export async function ingestScheduleAndTeams(
     const schedules = schedulesRes.data.data || [];
 
     const now = new Date();
-    const matchingSchedules = schedules.filter((s: any) => {
+    const matchingSchedules = schedules.filter((s: Schedule) => {
         const start = new Date(s.starts_at);
         const end = new Date(s.ends_at);
         return now >= start && now <= end;
@@ -70,9 +102,7 @@ export async function ingestScheduleAndTeams(
         process.stdout.write(`   Fetching page ${currentPage}... `);
         const gamesRes = await axios.get(`${gamesUrl}?page=${currentPage}`, { headers });
 
-        const pageGames = Array.isArray(gamesRes.data)
-            ? gamesRes.data
-            : (gamesRes.data.data || []);
+        const pageGames = extractDataArray(gamesRes.data);
         allGames = allGames.concat(pageGames);
 
         console.log(`Found ${pageGames.length} games.`);
@@ -156,9 +186,7 @@ export async function ingestScheduleAndTeams(
                 `${API_BASE}/teams/${sanitizeDocId(team.id)}/rosters`,
                 { headers },
             );
-            const rosterMetas = Array.isArray(rosterMetaRes.data)
-                ? rosterMetaRes.data
-                : (rosterMetaRes.data.data || []);
+            const rosterMetas = extractDataArray(rosterMetaRes.data);
 
             const targetRoster = rosterMetas.find(
                 (r: any) => r.schedule_uid === activeSchedule.id || r.schedule_id === activeSchedule.id,
@@ -179,14 +207,7 @@ export async function ingestScheduleAndTeams(
                     { headers },
                 );
 
-                const responseBody = playersRes.data;
-                let players: any[] = [];
-                if (Array.isArray(responseBody)) players = responseBody;
-                else if (Array.isArray(responseBody.data)) players = responseBody.data;
-                else if (responseBody.data && Array.isArray(responseBody.data.players))
-                    players = responseBody.data.players;
-                else if (responseBody.data && Array.isArray(responseBody.data.data))
-                    players = responseBody.data.data;
+                const players = extractDataArray(playersRes.data);
 
                 if (players.length > 0) {
                     console.log(`   -> Found ${players.length} players.`);
