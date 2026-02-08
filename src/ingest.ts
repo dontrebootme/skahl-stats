@@ -59,7 +59,7 @@ export async function ingestScheduleAndTeams(
     }
 
     // --- Fetch Games (With Pagination) ---
-    const gamesUrl = `${API_BASE}/schedules/${activeSchedule.id}/games`;
+    const gamesUrl = `${API_BASE}/schedules/${sanitizeDocId(activeSchedule.id)}/games`;
     let allGames: any[] = [];
     let currentPage = 1;
     let totalPages = 1;

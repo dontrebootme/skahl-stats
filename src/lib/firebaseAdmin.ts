@@ -36,7 +36,12 @@ export function getDb(): Firestore {
             console.log(`⚠️ FIRESTORE_EMULATOR_HOST detected (${emulatorHost}). Connecting to Emulator...`);
             initializeApp({ projectId: "skahl-stats" });
         } else if (serviceAccountEnv) {
-            initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
+            try {
+                initializeApp({ credential: cert(JSON.parse(serviceAccountEnv)) });
+            } catch (e) {
+                console.error("❌ Failed to parse FIREBASE_SERVICE_ACCOUNT. Falling back to ADC.", e);
+                initializeApp({ projectId: CONFIG.projectId });
+            }
         } else {
             console.log("ℹ️ No env vars found. Attempting ADC connection...");
             initializeApp({ projectId: CONFIG.projectId });
