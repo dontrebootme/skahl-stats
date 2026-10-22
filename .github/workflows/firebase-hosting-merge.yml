@@ -27,17 +27,10 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
 
-      - name: Deploy Firestore Rules
-        env:
-          # Use the same service account as hosting
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
-        run: |
-          echo "$FIREBASE_SERVICE_ACCOUNT" > service-account.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$(pwd)/service-account.json
-          npx firebase-tools deploy --only firestore:rules --project spof-io --json
-          rm service-account.json
-
-
+      # Firestore rules are NOT deployed from this repo. The spof-io (default)
+      # database is shared with dontrebootme/mhl, whose firestore.rules is the
+      # single source (it includes skahl_teams/skahl_games). Deploying rules
+      # here would overwrite MHL's rules and take that site down (mhl#37).
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

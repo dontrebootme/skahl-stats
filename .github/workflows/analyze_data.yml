@@ -19,5 +19,5 @@ jobs:
 
       - name: Run Analysis
         env:
-          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SPOF_IO }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SKAHL_INGEST }}
         run: bun run scripts/analyze_firestore.ts
