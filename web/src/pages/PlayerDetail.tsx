@@ -6,7 +6,7 @@ import { Button } from '../components/ui/Button';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { COLLECTIONS } from '../lib/collections';
-import { ChevronLeft, User, Info, Activity } from 'lucide-react';
+import { ChevronLeft, User, Info, Activity, Trophy } from 'lucide-react';
 
 interface PlayerDetailData {
     id: string;
@@ -20,6 +20,12 @@ interface PlayerDetailData {
     height?: string;
     weight?: string;
     image?: string;
+    stats?: {
+        goals: number;
+        assists: number;
+        points: number;
+        pim: number;
+    };
 }
 
 export default function PlayerDetail() {
@@ -31,9 +37,6 @@ export default function PlayerDetail() {
         const fetchPlayer = async () => {
             if (!teamId || !playerId) return;
             try {
-                // Add artificial delay for smooth transition
-                // await new Promise(r => setTimeout(r, 300)); 
-
                 const playerDocRef = doc(db, COLLECTIONS.TEAMS, teamId, 'roster', playerId);
                 const playerDoc = await getDoc(playerDocRef);
 
@@ -50,7 +53,8 @@ export default function PlayerDetail() {
                         bio: data.bio,
                         height: data.height,
                         weight: data.weight,
-                        image: data.image?.full_path
+                        image: data.image?.full_path,
+                        stats: data.stats
                     });
                 } else {
                     console.error("Player not found");
@@ -122,46 +126,42 @@ export default function PlayerDetail() {
                         <Button
                             variant="outline"
                             size="icon"
-                            className="h-10 w-10 border-gray-200 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                            className="h-10 w-10 border-2 border-gray-200 hover:bg-gray-100 hover:text-gray-900 transition-colors shadow-none rounded-md"
                         >
                             <ChevronLeft className="h-5 w-5" />
                         </Button>
                     </Link>
-                    <h1 className="text-3xl font-bold tracking-tight text-gray-900">{player.firstName} {player.lastName}</h1>
+                    <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 uppercase">{player.firstName} {player.lastName}</h1>
                 </div>
 
-                <Card className="border-0 ring-1 ring-gray-100 bg-white shadow-xl shadow-gray-200/50 overflow-hidden hover:shadow-2xl transition-all duration-300">
+                <Card className="border-0 ring-1 ring-gray-100 bg-white shadow-none overflow-hidden hover:scale-[1.005] transition-transform duration-200 rounded-lg">
                     <div className="md:flex min-h-[500px]">
-                        {/* Left Column: Image & visual identity */}
-                        <div className="md:w-1/3 relative overflow-hidden bg-slate-900 flex flex-col items-center justify-center p-8 text-white">
-                            {/* Mesh Gradient Overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-slate-900 to-slate-900 z-0 opacity-50"></div>
-
-                            {/* Decorative Elements */}
-                            <div className="absolute top-0 right-0 p-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                            <div className="absolute bottom-0 left-0 p-32 bg-indigo-500/10 rounded-full blur-3xl -ml-16 -mb-16"></div>
+                        {/* Left Column: Image & visual identity - Solid Color Block */}
+                        <div className="md:w-1/3 relative bg-primary flex flex-col items-center justify-center p-8 text-white">
+                            {/* Simple geometric decoration (optional) */}
+                            <div className="absolute top-0 right-0 p-32 bg-white/5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+                            <div className="absolute bottom-0 left-0 p-32 bg-white/5 rounded-full -ml-16 -mb-16 pointer-events-none"></div>
 
                             <div className="relative z-10 flex flex-col items-center space-y-6 text-center">
                                 {player.image ? (
-                                    <div className="relative group">
-                                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full opacity-70 blur opacity-75 group-hover:opacity-100 transition duration-200"></div>
+                                    <div className="relative">
                                         <img
                                             src={player.image}
                                             alt={`${player.firstName} ${player.lastName}`}
-                                            className="relative w-56 h-56 rounded-full object-cover border-4 border-white shadow-2xl"
+                                            className="relative w-56 h-56 rounded-full object-cover border-4 border-white/20"
                                         />
                                     </div>
                                 ) : (
-                                    <div className="w-56 h-56 rounded-full bg-slate-800 flex items-center justify-center border-4 border-slate-700 shadow-2xl">
-                                        <User size={80} className="text-slate-500" />
+                                    <div className="w-56 h-56 rounded-full bg-white/10 flex items-center justify-center border-4 border-white/20">
+                                        <User size={80} className="text-white/50" />
                                     </div>
                                 )}
 
-                                <div className="space-y-1">
-                                    <div className="text-5xl font-black tracking-tighter text-white/90">
+                                <div className="space-y-2">
+                                    <div className="text-6xl font-black tracking-tighter text-white">
                                         #{player.jerseyNumber}
                                     </div>
-                                    <div className="px-4 py-1.5 bg-white/10 backdrop-blur-md rounded-full text-sm font-medium border border-white/10 shadow-sm inline-block">
+                                    <div className="px-4 py-2 bg-white/10 rounded-md text-sm font-bold border border-white/10 uppercase tracking-widest">
                                         {player.position}
                                     </div>
                                 </div>
@@ -171,36 +171,63 @@ export default function PlayerDetail() {
                         {/* Right Column: Stats & Bio */}
                         <div className="p-8 md:p-12 md:w-2/3 flex flex-col justify-center bg-white">
                             <div className="max-w-2xl">
-                                <div className="flex items-center space-x-2 mb-6 text-blue-600 font-semibold uppercase tracking-wider text-xs">
+                                <div className="flex items-center space-x-2 mb-6 text-primary font-bold uppercase tracking-wider text-xs">
                                     <Activity className="w-4 h-4" />
                                     <span>Player Attributes</span>
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
                                     <div className="space-y-1">
-                                        <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Shoots</span>
-                                        <p className="text-xl font-bold text-gray-900">{player.shoots || "—"}</p>
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Shoots</span>
+                                        <p className="text-2xl font-extrabold text-gray-900">{player.shoots || "—"}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Catches</span>
-                                        <p className="text-xl font-bold text-gray-900">{player.catches || "—"}</p>
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Catches</span>
+                                        <p className="text-2xl font-extrabold text-gray-900">{player.catches || "—"}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Height</span>
-                                        <p className="text-xl font-bold text-gray-900">{player.height || "—"}</p>
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Height</span>
+                                        <p className="text-2xl font-extrabold text-gray-900">{player.height || "—"}</p>
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">Weight</span>
-                                        <p className="text-xl font-bold text-gray-900">{player.weight || "—"}</p>
+                                        <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">Weight</span>
+                                        <p className="text-2xl font-extrabold text-gray-900">{player.weight || "—"}</p>
                                     </div>
                                 </div>
 
-                                <div className="border-t border-gray-100 pt-8">
-                                    <div className="flex items-center space-x-2 mb-4 text-gray-900 font-semibold">
+                                {player.stats && (
+                                    <div className="mb-10 bg-muted/30 rounded-lg p-6 border border-border/50">
+                                        <div className="flex items-center space-x-2 mb-4 text-primary font-bold uppercase tracking-wider text-xs">
+                                            <Trophy className="w-4 h-4" />
+                                            <span>Season Statistics</span>
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-4 text-center">
+                                            <div className="bg-white p-4 rounded-md ring-1 ring-gray-100">
+                                                <div className="text-3xl font-black text-gray-900">{player.stats.goals}</div>
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Goals</div>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-md ring-1 ring-gray-100">
+                                                <div className="text-3xl font-black text-gray-900">{player.stats.assists}</div>
+                                                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Assists</div>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-md ring-1 ring-gray-100">
+                                                <div className="text-3xl font-black text-primary">{player.stats.points}</div>
+                                                <div className="text-[10px] font-bold text-primary/60 uppercase tracking-wider">Points</div>
+                                            </div>
+                                            <div className="bg-white p-4 rounded-md ring-1 ring-gray-100">
+                                                <div className="text-3xl font-black text-destructive">{player.stats.pim}</div>
+                                                <div className="text-[10px] font-bold text-destructive/60 uppercase tracking-wider">PIM</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="border-t-2 border-gray-100 pt-8">
+                                    <div className="flex items-center space-x-2 mb-4 text-gray-900 font-bold">
                                         <Info className="w-5 h-5 text-gray-400" />
                                         <span>Biography</span>
                                     </div>
-                                    <p className="text-gray-600 leading-relaxed text-lg">
+                                    <p className="text-gray-600 leading-relaxed text-lg font-medium">
                                         {player.bio ? player.bio : (
                                             <span className="italic text-gray-400">No biography available for this player.</span>
                                         )}

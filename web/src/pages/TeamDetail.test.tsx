@@ -39,8 +39,8 @@ describe('TeamDetail Page', () => {
             { id: 'p2', data: () => ({ name_first: 'Jane', name_last: 'Smith', player_number: '1', position: 'Goalie' }) },
         ];
 
-        (firestore.getDoc as any).mockResolvedValue(mockTeam);
-        (firestore.getDocs as any).mockResolvedValue({ docs: mockRoster });
+        vi.mocked(firestore.getDoc).mockResolvedValue(mockTeam as unknown as firestore.DocumentSnapshot);
+        vi.mocked(firestore.getDocs).mockResolvedValue({ docs: mockRoster } as unknown as firestore.QuerySnapshot);
 
         render(
             <MemoryRouter initialEntries={['/teams/team1']}>
@@ -72,8 +72,8 @@ describe('TeamDetail Page', () => {
             { id: 'p2', data: () => ({ name_first: 'Player', name_last: 'One', player_number: '10' }) },
         ];
 
-        (firestore.getDoc as any).mockResolvedValue(mockTeam);
-        (firestore.getDocs as any).mockResolvedValue({ docs: mockRoster });
+        vi.mocked(firestore.getDoc).mockResolvedValue(mockTeam as unknown as firestore.DocumentSnapshot);
+        vi.mocked(firestore.getDocs).mockResolvedValue({ docs: mockRoster } as unknown as firestore.QuerySnapshot);
 
         render(
             <MemoryRouter initialEntries={['/teams/team1']}>
@@ -98,9 +98,9 @@ describe('TeamDetail Page', () => {
             data: () => undefined,
         };
 
-        (firestore.getDoc as any).mockResolvedValue(mockTeam);
+        vi.mocked(firestore.getDoc).mockResolvedValue(mockTeam as unknown as firestore.DocumentSnapshot);
         // getDocs shouldn't be called if team doesn't exist, but safe to mock
-        (firestore.getDocs as any).mockResolvedValue({ docs: [] });
+        vi.mocked(firestore.getDocs).mockResolvedValue({ docs: [] } as unknown as firestore.QuerySnapshot);
 
         render(
             <MemoryRouter initialEntries={['/teams/invalid']}>

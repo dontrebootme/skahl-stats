@@ -40,7 +40,7 @@ describe('PlayerDetail Page', () => {
             }),
         };
 
-        (firestore.getDoc as any).mockResolvedValue(mockPlayer);
+        vi.mocked(firestore.getDoc).mockResolvedValue(mockPlayer as unknown as firestore.DocumentSnapshot);
 
         render(
             <MemoryRouter initialEntries={['/teams/team1/players/p1']}>
@@ -65,7 +65,7 @@ describe('PlayerDetail Page', () => {
             data: () => undefined,
         };
 
-        (firestore.getDoc as any).mockResolvedValue(mockPlayer);
+        vi.mocked(firestore.getDoc).mockResolvedValue(mockPlayer as unknown as firestore.DocumentSnapshot);
 
         render(
             <MemoryRouter initialEntries={['/teams/team1/players/invalid']}>
